@@ -46,8 +46,8 @@ class LibraryController(
     if (principal.user.sharedAllLibraries) {
       libraryRepository.findAll()
     } else {
-      principal.user.sharedLibraries
-    }.sortedBy { it.name }.map { it.toDto(includeRoot = principal.user.isAdmin()) }
+      libraryRepository.findAllById(principal.user.sharedLibrariesIds)
+    }.sortedBy { it.name }.map { it.toDto(includeRoot = principal.user.roleAdmin) }
 
   @GetMapping("{id}")
   fun getOne(
@@ -56,7 +56,7 @@ class LibraryController(
   ): LibraryDto =
     libraryRepository.findByIdOrNull(id)?.let {
       if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      it.toDto(includeRoot = principal.user.isAdmin())
+      it.toDto(includeRoot = principal.user.roleAdmin)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @PostMapping
@@ -66,7 +66,7 @@ class LibraryController(
     @Valid @RequestBody library: LibraryCreationDto
   ): LibraryDto =
     try {
-      libraryLifecycle.addLibrary(Library(library.name, library.root)).toDto(includeRoot = principal.user.isAdmin())
+      libraryLifecycle.addLibrary(Library(library.name, library.root)).toDto(includeRoot = principal.user.roleAdmin)
     } catch (e: Exception) {
       when (e) {
         is FileNotFoundException,

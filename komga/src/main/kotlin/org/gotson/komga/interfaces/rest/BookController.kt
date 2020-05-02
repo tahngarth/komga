@@ -91,13 +91,13 @@ class BookController(
       when {
         // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
         !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> {
-          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibraries.map { it.id })
+          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibrariesIds)
           if (authorizedLibraryIDs.isEmpty()) return@let Page.empty<Book>(pageRequest)
           else specs.add(Book::series.toJoin().join(Series::library, JoinType.INNER).where(Library::id).`in`(authorizedLibraryIDs))
         }
 
         // limited user: filter on user's authorized libraries
-        !principal.user.sharedAllLibraries -> specs.add(Book::series.toJoin().where(Series::library).`in`(principal.user.sharedLibraries))
+        !principal.user.sharedAllLibraries -> specs.add(Book::series.toJoin().join(Series::library, JoinType.INNER).where(Library::id).`in`(principal.user.sharedLibrariesIds))
 
         // non-limited user: filter on provided libraries
         !libraryIds.isNullOrEmpty() -> {
@@ -118,7 +118,7 @@ class BookController(
       } else {
         bookRepository.findAll(pageRequest)
       }
-    }.map { it.toDto(includeFullUrl = principal.user.isAdmin()) }
+    }.map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
   }
 
 
@@ -138,8 +138,8 @@ class BookController(
     return if (principal.user.sharedAllLibraries) {
       bookRepository.findAll(pageRequest)
     } else {
-      bookRepository.findBySeriesLibraryIn(principal.user.sharedLibraries, pageRequest)
-    }.map { it.toDto(includeFullUrl = principal.user.isAdmin()) }
+      bookRepository.findBySeriesLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
+    }.map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
   }
 
 
@@ -150,7 +150,7 @@ class BookController(
   ): BookDto =
     bookRepository.findByIdOrNull(bookId)?.let {
       if (!principal.user.canAccessBook(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      it.toDto(includeFullUrl = principal.user.isAdmin())
+      it.toDto(includeFullUrl = principal.user.roleAdmin)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @GetMapping("api/v1/books/{bookId}/previous")
@@ -165,7 +165,7 @@ class BookController(
         .sortedByDescending { it.metadata.numberSort }
         .find { it.metadata.numberSort < book.metadata.numberSort }
 
-      previousBook?.toDto(includeFullUrl = principal.user.isAdmin())
+      previousBook?.toDto(includeFullUrl = principal.user.roleAdmin)
         ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
@@ -181,7 +181,7 @@ class BookController(
         .sortedBy { it.metadata.numberSort }
         .find { it.metadata.numberSort > book.metadata.numberSort }
 
-      nextBook?.toDto(includeFullUrl = principal.user.isAdmin()) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+      nextBook?.toDto(includeFullUrl = principal.user.roleAdmin) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
 

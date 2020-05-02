@@ -20,10 +20,10 @@ interface SeriesRepository : JpaRepository<Series, Long>, JpaSpecificationExecut
   override fun findAll(pageable: Pageable): Page<Series>
 
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findByLibraryIn(libraries: Collection<Library>, sort: Sort): List<Series>
+  fun findByLibraryIdIn(libraries: Collection<Long>, sort: Sort): List<Series>
 
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findByLibraryIn(libraries: Collection<Library>, page: Pageable): Page<Series>
+  fun findByLibraryIdIn(libraries: Collection<Long>, page: Pageable): Page<Series>
 
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
   fun findByLibraryId(libraryId: Long, sort: Sort): List<Series>
@@ -32,9 +32,9 @@ interface SeriesRepository : JpaRepository<Series, Long>, JpaSpecificationExecut
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
   fun findRecentlyUpdated(pageable: Pageable): Page<Series>
 
-  @Query("select s from Series s where s.createdDate <> s.lastModifiedDate and s.library in ?1")
+  @Query("select s from Series s where s.createdDate <> s.lastModifiedDate and s.library.id in ?1")
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findRecentlyUpdatedByLibraryIn(libraries: Collection<Library>, pageable: Pageable): Page<Series>
+  fun findRecentlyUpdatedByLibraryIdIn(libraries: Collection<Long>, pageable: Pageable): Page<Series>
 
   fun findByLibraryIdAndUrlNotIn(libraryId: Long, urls: Collection<URL>): List<Series>
   fun findByLibraryIdAndUrl(libraryId: Long, url: URL): Series?

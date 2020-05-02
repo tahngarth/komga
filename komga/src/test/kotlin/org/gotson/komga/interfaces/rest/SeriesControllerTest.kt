@@ -3,7 +3,6 @@ package org.gotson.komga.interfaces.rest
 import org.assertj.core.api.Assertions.assertThat
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.SeriesMetadata
-import org.gotson.komga.domain.model.UserRoles
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
@@ -308,7 +307,7 @@ class SeriesControllerTest(
     }
 
     @Test
-    @WithMockCustomUser(roles = [UserRoles.ADMIN])
+    @WithMockCustomUser(roles = ["ADMIN"])
     fun `given admin user when getting series then url is available`() {
       val series = makeSeries(
         name = "series",
@@ -357,7 +356,7 @@ class SeriesControllerTest(
       """{"title":""}""",
       """{"titleSort":""}"""
     ])
-    @WithMockCustomUser(roles = [UserRoles.ADMIN])
+    @WithMockCustomUser(roles = ["ADMIN"])
     fun `given invalid json when updating metadata then raise validation error`(jsonString: String) {
       mockMvc.patch("/api/v1/series/1/metadata") {
         contentType = MediaType.APPLICATION_JSON
@@ -371,7 +370,7 @@ class SeriesControllerTest(
   //Not part of the above @Nested class because @Transactional fails
   @Test
   @Transactional
-  @WithMockCustomUser(roles = [UserRoles.ADMIN])
+  @WithMockCustomUser(roles = ["ADMIN"])
   fun `given valid json when updating metadata then fields are updated`() {
     val series = makeSeries(
       name = "series",

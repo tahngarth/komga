@@ -26,6 +26,7 @@ interface BookRepository : JpaRepository<Book, Long>, JpaSpecificationExecutor<B
 
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
   fun findBySeriesLibraryIn(seriesLibrary: Collection<Library>, pageable: Pageable): Page<Book>
+  fun findBySeriesLibraryIdIn(seriesLibrary: Collection<Long>, pageable: Pageable): Page<Book>
 
   fun findBySeriesLibraryIn(seriesLibrary: Collection<Library>): List<Book>
   fun findBySeriesLibrary(seriesLibrary: Library): List<Book>

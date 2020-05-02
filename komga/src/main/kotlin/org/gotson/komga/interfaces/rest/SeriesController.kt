@@ -77,13 +77,13 @@ class SeriesController(
       when {
         // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
         !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> {
-          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibraries.map { it.id })
+          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibrariesIds)
           if (authorizedLibraryIDs.isEmpty()) return@let Page.empty<Series>(pageRequest)
           else specs.add(Series::library.toJoin().where(Library::id).`in`(authorizedLibraryIDs))
         }
 
         // limited user: filter on user's authorized libraries
-        !principal.user.sharedAllLibraries -> specs.add(Series::library.`in`(principal.user.sharedLibraries))
+        !principal.user.sharedAllLibraries -> specs.add(Series::library.toJoin().where(Library::id).`in`(principal.user.sharedLibrariesIds))
 
         // non-limited user: filter on provided libraries
         !libraryIds.isNullOrEmpty() -> {
@@ -104,7 +104,7 @@ class SeriesController(
       } else {
         seriesRepository.findAll(pageRequest)
       }
-    }.map { it.toDto(includeUrl = principal.user.isAdmin()) }
+    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return recently added or updated series.")
@@ -123,8 +123,8 @@ class SeriesController(
     return if (principal.user.sharedAllLibraries) {
       seriesRepository.findAll(pageRequest)
     } else {
-      seriesRepository.findByLibraryIn(principal.user.sharedLibraries, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.isAdmin()) }
+      seriesRepository.findByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
+    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return newly added series.")
@@ -143,8 +143,8 @@ class SeriesController(
     return if (principal.user.sharedAllLibraries) {
       seriesRepository.findAll(pageRequest)
     } else {
-      seriesRepository.findByLibraryIn(principal.user.sharedLibraries, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.isAdmin()) }
+      seriesRepository.findByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
+    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return recently updated series, but not newly added ones.")
@@ -163,8 +163,8 @@ class SeriesController(
     return if (principal.user.sharedAllLibraries) {
       seriesRepository.findRecentlyUpdated(pageRequest)
     } else {
-      seriesRepository.findRecentlyUpdatedByLibraryIn(principal.user.sharedLibraries, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.isAdmin()) }
+      seriesRepository.findRecentlyUpdatedByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
+    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
   }
 
   @GetMapping("{seriesId}")
@@ -174,7 +174,7 @@ class SeriesController(
   ): SeriesDto =
     seriesRepository.findByIdOrNull(id)?.let {
       if (!principal.user.canAccessSeries(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      it.toDto(includeUrl = principal.user.isAdmin())
+      it.toDto(includeUrl = principal.user.roleAdmin)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @ApiResponse(content = [Content(schema = Schema(type = "string", format = "binary"))])
@@ -213,7 +213,7 @@ class SeriesController(
     return (if (!mediaStatus.isNullOrEmpty())
       bookRepository.findAllByMediaStatusInAndSeriesId(mediaStatus, id, pageRequest)
     else
-      bookRepository.findAllBySeriesId(id, pageRequest)).map { it.toDto(includeFullUrl = principal.user.isAdmin()) }
+      bookRepository.findAllBySeriesId(id, pageRequest)).map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
   }
 
   @PostMapping("{seriesId}/analyze")

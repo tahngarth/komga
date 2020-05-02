@@ -133,7 +133,7 @@ class OpdsController(
     val series =
       mutableListOf<Specification<Series>>().let { specs ->
         if (!principal.user.sharedAllLibraries) {
-          specs.add(Series::library.`in`(principal.user.sharedLibraries))
+          specs.add(Series::library.toJoin().where(Library::id).`in`(principal.user.sharedLibrariesIds))
         }
 
         if (!searchTerm.isNullOrEmpty()) {
@@ -169,7 +169,7 @@ class OpdsController(
       if (principal.user.sharedAllLibraries) {
         seriesRepository.findAll(sort)
       } else {
-        seriesRepository.findByLibraryIn(principal.user.sharedLibraries, sort)
+        seriesRepository.findByLibraryIdIn(principal.user.sharedLibrariesIds, sort)
       }
 
     return OpdsFeedNavigation(
@@ -193,7 +193,7 @@ class OpdsController(
       if (principal.user.sharedAllLibraries) {
         libraryRepository.findAll()
       } else {
-        principal.user.sharedLibraries
+        libraryRepository.findAllById(principal.user.sharedLibrariesIds)
       }
     return OpdsFeedNavigation(
       id = ID_LIBRARIES_ALL,

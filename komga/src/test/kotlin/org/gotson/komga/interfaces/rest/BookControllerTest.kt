@@ -6,7 +6,6 @@ import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.BookPage
 import org.gotson.komga.domain.model.Media
-import org.gotson.komga.domain.model.UserRoles
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
@@ -292,7 +291,7 @@ class BookControllerTest(
     }
 
     @Test
-    @WithMockCustomUser(roles = [UserRoles.ADMIN])
+    @WithMockCustomUser(roles = ["ADMIN"])
     fun `given admin user when getting books then full url is available`() {
       val series = makeSeries(
         name = "series",
@@ -426,7 +425,7 @@ class BookControllerTest(
       """{"authors":"[{"name":""}]"}""",
       """{"ageRating":-1}"""
     ])
-    @WithMockCustomUser(roles = [UserRoles.ADMIN])
+    @WithMockCustomUser(roles = ["ADMIN"])
     fun `given invalid json when updating metadata then raise validation error`(jsonString: String) {
       mockMvc.patch("/api/v1/books/1/metadata") {
         contentType = MediaType.APPLICATION_JSON
@@ -440,7 +439,7 @@ class BookControllerTest(
   //Not part of the above @Nested class because @Transactional fails
   @Test
   @Transactional
-  @WithMockCustomUser(roles = [UserRoles.ADMIN])
+  @WithMockCustomUser(roles = ["ADMIN"])
   fun `given valid json when updating metadata then fields are updated`() {
     val series = makeSeries(
       name = "series",
@@ -521,7 +520,7 @@ class BookControllerTest(
   //Not part of the above @Nested class because @Transactional fails
   @Test
   @Transactional
-  @WithMockCustomUser(roles = [UserRoles.ADMIN])
+  @WithMockCustomUser(roles = ["ADMIN"])
   fun `given json with null fields when updating metadata then fields with null are unset`() {
     val testDate = LocalDate.of(2020, 1, 1)
     val series = makeSeries(
@@ -572,7 +571,7 @@ class BookControllerTest(
   //Not part of the above @Nested class because @Transactional fails
   @Test
   @Transactional
-  @WithMockCustomUser(roles = [UserRoles.ADMIN])
+  @WithMockCustomUser(roles = ["ADMIN"])
   fun `given json without fields when updating metadata then existing fields are untouched`() {
     val testDate = LocalDate.of(2020, 1, 1)
     val series = makeSeries(

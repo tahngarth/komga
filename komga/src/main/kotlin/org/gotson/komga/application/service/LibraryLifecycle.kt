@@ -64,7 +64,7 @@ class LibraryLifecycle(
 
     logger.info { "Remove shared library access for all users" }
     userRepository.findBySharedLibrariesContaining(library).let { users ->
-      users.forEach { user -> user.sharedLibraries.removeIf { it.id == library.id } }
+//      users.forEach { user -> user.sharedLibraries.removeIf { it.id == library.id } }
       userRepository.saveAll(users)
     }
 
