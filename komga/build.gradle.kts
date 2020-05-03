@@ -5,7 +5,6 @@ import com.rohanprabhu.gradle.plugins.kdjooq.jooqCodegenConfiguration
 import com.rohanprabhu.gradle.plugins.kdjooq.target
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.kapt3.base.incremental.getIncrementalProcessorsFromClasspath
 
 plugins {
   run {
@@ -144,12 +143,14 @@ tasks {
     }
   }
 
+  //unpack Spring Boot's fat jar for better Docker image layering
   register<Copy>("unpack") {
     dependsOn(bootJar)
     from(zipTree(getByName("bootJar").outputs.files.singleFile))
     into("$buildDir/dependency")
   }
 
+  //delete the public folder containing the webui
   register<Delete>("deletePublic") {
     group = "web"
     delete("$projectDir/src/main/resources/public/")
@@ -183,6 +184,7 @@ tasks {
     )
   }
 
+  //copy the webui build into public
   register<Copy>("copyWebDist") {
     group = "web"
     dependsOn("deletePublic", "npmBuild")
@@ -201,6 +203,18 @@ allOpen {
   annotation("javax.persistence.Embeddable")
 }
 
+sourceSets {
+  //add a flyway sourceSet
+  val flyway by creating {
+    compileClasspath += sourceSets.main.get().compileClasspath
+    runtimeClasspath += sourceSets.main.get().runtimeClasspath
+  }
+  //main sourceSet depends on the output of flyway sourceSet
+  main {
+    output.dir(flyway.output)
+  }
+}
+
 val jooqDb = mapOf(
   "url" to "jdbc:h2:${project.buildDir}/generated/flyway/h2",
   "schema" to "PUBLIC",
@@ -213,17 +227,19 @@ flyway {
   password = jooqDb["password"]
   schemas = arrayOf(jooqDb["schema"])
   locations = arrayOf(
-    "filesystem:src/main/resources/db/migration",
     "classpath:db/migration"
   )
 }
+//in order to include the Java migrations, flywayClasses must be run before flywayMigrate
+val flywayMigrate by project.tasks
+flywayMigrate.dependsOn("flywayClasses")
 
 jooqGenerator {
   jooqVersion = "3.13.1"
   configuration("primary", project.sourceSets.getByName("main")) {
     databaseSources = listOf(
-      "$projectDir/src/main/resources/db/migration",
-      "$projectDir/src/main/kotlin/db/migration"
+      "$projectDir/src/flyway/resources/db/migration",
+      "$projectDir/src/flyway/kotlin/db/migration"
     )
 
     configuration = jooqCodegenConfiguration {
