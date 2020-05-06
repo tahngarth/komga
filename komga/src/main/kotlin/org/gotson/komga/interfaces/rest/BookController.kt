@@ -28,6 +28,8 @@ import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.PageDto
 import org.gotson.komga.interfaces.rest.dto.toDto
+import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
+import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.springframework.core.io.FileSystemResource
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -67,6 +69,7 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
 class BookController(
   private val bookRepository: BookRepository,
+  private val bookDtoRepository: BookDtoRepository,
   private val bookLifecycle: BookLifecycle,
   private val taskReceiver: TaskReceiver
 ) {
@@ -119,6 +122,45 @@ class BookController(
         bookRepository.findAll(pageRequest)
       }
     }.map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
+  }
+
+  @PageableAsQueryParam
+  @GetMapping("api/v1/books2")
+  fun getAllBooks2(
+    @AuthenticationPrincipal principal: KomgaPrincipal,
+    @RequestParam(name = "search", required = false) searchTerm: String?,
+    @RequestParam(name = "library_id", required = false) libraryIds: List<Long>?,
+    @RequestParam(name = "media_status", required = false) mediaStatus: List<Media.Status>?,
+    @Parameter(hidden = true) page: Pageable
+  ): Page<BookDto> {
+    val pageRequest = PageRequest.of(
+      page.pageNumber,
+      page.pageSize,
+      if (page.sort.isSorted) Sort.by(page.sort.map { it.ignoreCase() }.toList())
+      else Sort.by(Sort.Order.asc("metadata.title").ignoreCase())
+    )
+
+    val filterLibraryIds = when {
+      // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
+      !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> libraryIds.intersect(principal.user.sharedLibrariesIds)
+
+      // limited user: filter on user's authorized libraries
+      !principal.user.sharedAllLibraries -> principal.user.sharedLibrariesIds
+
+      // non-limited user: filter on provided libraries
+      !libraryIds.isNullOrEmpty() -> libraryIds
+
+      else -> emptyList()
+    }
+
+    val bookSearch = BookSearch(
+      libraryIds = filterLibraryIds,
+      searchTerm = searchTerm,
+      mediaStatus = mediaStatus ?: emptyList(),
+      includeFullUrl = principal.user.roleAdmin
+    )
+
+    return bookDtoRepository.findAll(bookSearch, pageRequest)
   }
 
 

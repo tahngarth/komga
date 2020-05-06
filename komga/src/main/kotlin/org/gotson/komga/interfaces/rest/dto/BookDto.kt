@@ -1,6 +1,7 @@
 package org.gotson.komga.interfaces.rest.dto
 
 import com.fasterxml.jackson.annotation.JsonFormat
+import com.jakewharton.byteunits.BinaryByteUnit
 import org.apache.commons.io.FilenameUtils
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.Book
@@ -22,7 +23,7 @@ data class BookDto(
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
   val fileLastModified: LocalDateTime,
   val sizeBytes: Long,
-  val size: String,
+  val size: String = BinaryByteUnit.format(sizeBytes),
   val media: MediaDto,
   val metadata: BookMetadataDto
 )
