@@ -17,6 +17,7 @@ import javax.persistence.JoinColumn
 import javax.persistence.ManyToOne
 import javax.persistence.OneToMany
 import javax.persistence.OneToOne
+import javax.persistence.PrePersist
 import javax.persistence.Table
 import javax.validation.constraints.NotBlank
 import javax.validation.constraints.NotNull
@@ -59,7 +60,10 @@ class Series(
     get() = _books.toList()
     set(value) {
       _books.clear()
-      value.forEach { it.series = this }
+      value.forEach {
+        it.series = this
+        if (this::library.isInitialized) it.library = library
+      }
       _books.addAll(value.sortedWith(compareBy(natSortComparator) { it.name }))
       _books.forEachIndexed { index, book -> book.number = index + 1 }
     }
@@ -70,6 +74,11 @@ class Series(
 
   init {
     this.books = books.toList()
+  }
+
+  @PrePersist
+  fun beforeSave() {
+    books.forEach { it.library = this.library }
   }
 
   override fun toString(): String = "Series($id, ${url.toURI().path})"

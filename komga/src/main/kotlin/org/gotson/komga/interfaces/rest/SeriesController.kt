@@ -14,7 +14,6 @@ import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.Series
 import org.gotson.komga.domain.model.SeriesMetadata
-import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
 import org.gotson.komga.infrastructure.swagger.PageableAsQueryParam
@@ -22,7 +21,10 @@ import org.gotson.komga.infrastructure.swagger.PageableWithoutSortAsQueryParam
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.SeriesDto
 import org.gotson.komga.interfaces.rest.dto.SeriesMetadataUpdateDto
+import org.gotson.komga.interfaces.rest.dto.restrictUrl
 import org.gotson.komga.interfaces.rest.dto.toDto
+import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
+import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.springdoc.api.annotations.ParameterObject
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -53,7 +55,7 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping("api/v1/series", produces = [MediaType.APPLICATION_JSON_VALUE])
 class SeriesController(
   private val seriesRepository: SeriesRepository,
-  private val bookRepository: BookRepository,
+  private val bookDtoRepository: BookDtoRepository,
   private val bookController: BookController,
   private val taskReceiver: TaskReceiver
 ) {
@@ -210,10 +212,13 @@ class SeriesController(
       else Sort.by(Sort.Order.asc("metadata.numberSort"))
     )
 
-    return (if (!mediaStatus.isNullOrEmpty())
-      bookRepository.findAllByMediaStatusInAndSeriesId(mediaStatus, id, pageRequest)
-    else
-      bookRepository.findAllBySeriesId(id, pageRequest)).map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
+    return bookDtoRepository.findAll(
+      BookSearch(
+        seriesIds = listOf(id),
+        mediaStatus = mediaStatus ?: emptyList()
+      ),
+      pageRequest
+    ).map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
   @PostMapping("{seriesId}/analyze")

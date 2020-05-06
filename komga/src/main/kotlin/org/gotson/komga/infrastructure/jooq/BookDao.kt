@@ -1,6 +1,5 @@
 package org.gotson.komga.infrastructure.jooq
 
-import org.apache.commons.io.FilenameUtils
 import org.gotson.komga.interfaces.rest.dto.AuthorDto
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataDto
@@ -8,12 +7,15 @@ import org.gotson.komga.interfaces.rest.dto.MediaDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.gotson.komga.jooq.Tables
+import org.gotson.komga.jooq.tables.records.BookMetadataAuthorRecord
+import org.gotson.komga.jooq.tables.records.BookMetadataRecord
+import org.gotson.komga.jooq.tables.records.BookRecord
+import org.gotson.komga.jooq.tables.records.MediaRecord
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record
-import org.jooq.Table
+import org.jooq.ResultQuery
 import org.jooq.impl.DSL
-import org.jooq.impl.DSL.lower
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
@@ -29,93 +31,49 @@ class BookDao(
   private val dsl: DSLContext
 ) : BookDtoRepository {
 
-  private val b = Tables.BOOK.`as`("b")
-  private val s = Tables.SERIES.`as`("s")
-  private val m = Tables.MEDIA.`as`("m")
-  private val p = Tables.MEDIA_PAGE.`as`("p")
-  private val d = Tables.BOOK_METADATA.`as`("d")
-  private val a = Tables.BOOK_METADATA_AUTHOR.`as`("a")
+  private val b = Tables.BOOK
+  private val m = Tables.MEDIA
+  private val p = Tables.MEDIA_PAGE
+  private val d = Tables.BOOK_METADATA
+  private val a = Tables.BOOK_METADATA_AUTHOR
 
-  private fun <T : Record> Table<T>.aliasedFields() =
-    fields().map {
-      it.`as`("${this.name}_${it.name}")
-    }.toTypedArray()
+  private val mediaFields = b.media().fields().filterNot { it.name == b.media().THUMBNAIL.name }.toTypedArray()
+  private val groupFields = arrayOf(
+    *b.fields(),
+    *mediaFields,
+    *b.bookMetadata().fields(),
+    *a.fields()
+  )
+
+  private val sorts = mapOf(
+    "metadata.numberSort" to b.bookMetadata().NUMBER_SORT,
+    "createdDate" to b.CREATED_DATE,
+    "lastModifiedDate" to b.LAST_MODIFIED_DATE,
+    "fileSize" to b.FILE_SIZE
+  )
 
   override fun findAll(search: BookSearch, pageable: Pageable): Page<BookDto> {
     val conditions = search.toCondition()
 
-    val groupFields = arrayOf(
-      *b.fields(),
-      m.STATUS, m.MEDIA_TYPE, m.COMMENT,
-      *d.fields(),
-      *a.fields()
-    )
-
     val count = dsl.selectCount()
       .from(b)
-      .join(s).on(b.SERIES_ID.eq(s.ID))
       .join(m).on(b.MEDIA_ID.eq(m.ID))
       .join(d).on(b.METADATA_ID.eq(d.ID))
       .where(conditions)
       .fetchOne(0, Int::class.java)
 
-    val dtos = dsl.select(*groupFields)
-      .select(DSL.count().`as`("pageCount"))
-      .from(b)
-      .join(s).on(b.SERIES_ID.eq(s.ID))
-      .join(m).on(b.MEDIA_ID.eq(m.ID))
-      .leftJoin(p).on(m.ID.eq(p.MEDIA_ID))
-      .join(d).on(b.METADATA_ID.eq(d.ID))
-      .leftJoin(a).on(d.ID.eq(a.BOOK_METADATA_ID))
+    val orderBy = pageable.sort.mapNotNull {
+      val f = sorts[it.property]
+      if (it.isAscending) f?.asc() else f?.desc()
+    }
+
+    val dtos = selectBase()
       .where(conditions)
       .groupBy(*groupFields)
-      .orderBy(lower(d.TITLE))
+      .orderBy(orderBy)
       .limit(pageable.pageSize)
       .offset(pageable.offset)
-      .fetchGroups(
-        { it.into(*b.fields(), m.STATUS, m.MEDIA_TYPE, m.COMMENT, *d.fields(), DSL.field("pageCount")) }, { it.into(a) }
-      ).map { (r, ar) ->
-        val br = r.into(b)
-        val mr = r.into(m)
-        val dr = r.into(d)
-        BookDto(
-          id = br.id,
-          seriesId = br.seriesId,
-          name = br.name,
-          url = br.url.getUrl(search.includeFullUrl),
-          number = br.number,
-          created = br.createdDate?.toUTC(),
-          lastModified = br.lastModifiedDate?.toUTC(),
-          fileLastModified = br.fileLastModified.toUTC(),
-          sizeBytes = br.fileSize,
-          media = MediaDto(
-            status = mr.status,
-            mediaType = mr.mediaType,
-            pagesCount = r["pageCount"] as Int,
-            comment = mr.comment ?: ""
-          ),
-          metadata = BookMetadataDto(
-            title = dr.title,
-            titleLock = dr.titleLock,
-            summary = dr.summary,
-            summaryLock = dr.summaryLock,
-            number = dr.number,
-            numberLock = dr.numberLock,
-            numberSort = dr.numberSort,
-            numberSortLock = dr.numberSortLock,
-            readingDirection = dr.readingDirection ?: "",
-            readingDirectionLock = dr.readingDirectionLock,
-            publisher = dr.publisher,
-            publisherLock = dr.publisherLock,
-            ageRating = dr.ageRating,
-            ageRatingLock = dr.ageRatingLock,
-            releaseDate = dr.releaseDate,
-            releaseDateLock = dr.releaseDateLock,
-            authors = ar.filter { it.name != null }.map { AuthorDto(it.name, it.role) },
-            authorsLock = dr.authorsLock
-          )
-        )
-      }
+      .fetchAndMap()
 
     return PageImpl(
       dtos,
@@ -124,20 +82,121 @@ class BookDao(
     )
   }
 
+  override fun findByIdOrNull(bookId: Long): BookDto? =
+    selectBase()
+      .where(b.ID.eq(bookId))
+      .groupBy(*groupFields)
+      .fetchAndMap()
+      .firstOrNull()
+
+  override fun getLibraryId(bookId: Long): Long? =
+    dsl.select(b.LIBRARY_ID)
+      .from(b)
+      .where(b.ID.eq(bookId))
+      .fetchOne(0, Long::class.java)
+
+  override fun getThumbnail(bookId: Long): ByteArray? =
+    dsl.select(b.media().THUMBNAIL)
+      .from(b)
+      .where(b.ID.eq(bookId))
+      .fetchOne(0, ByteArray::class.java)
+
+  override fun findPreviousInSeries(bookId: Long): BookDto? = findSibling(bookId, next = false)
+
+  override fun findNextInSeries(bookId: Long): BookDto? = findSibling(bookId, next = true)
+
+  private fun findSibling(bookId: Long, next: Boolean): BookDto? {
+    val record = dsl.select(b.SERIES_ID, b.bookMetadata().NUMBER_SORT)
+      .from(b)
+      .where(b.ID.eq(bookId))
+      .fetchOne()
+    val seriesId = record.get(0, Long::class.java)
+    val numberSort = record.get(1, Float::class.java)
+
+    return selectBase()
+      .where(b.SERIES_ID.eq(seriesId))
+      .groupBy(*groupFields)
+      .orderBy(b.bookMetadata().NUMBER_SORT.let { if (next) it.asc() else it.desc() })
+      .seek(numberSort)
+      .limit(1)
+      .fetchAndMap()
+      .firstOrNull()
+  }
+
+  private fun selectBase() =
+    dsl.select(*groupFields)
+      .select(DSL.count(p.NUMBER).`as`("pageCount"))
+      .from(b)
+      .leftJoin(p).on(b.media().ID.eq(p.MEDIA_ID))
+      .leftJoin(a).on(b.bookMetadata().ID.eq(a.BOOK_METADATA_ID))
+
+  private fun ResultQuery<Record>.fetchAndMap() =
+    fetchGroups(
+      { it.into(*b.fields(), *mediaFields, *b.bookMetadata().fields(), DSL.field("pageCount")) }, { it.into(a) }
+    ).map { (r, ar) ->
+      val br = r.into(b)
+      val mr = r.into(b.media())
+      val dr = r.into(b.bookMetadata())
+      val pageCount = r["pageCount"] as Int
+      br.toDto(mr.toDto(pageCount), dr.toDto(ar))
+    }
+
   private fun BookSearch.toCondition(): Condition {
     var c: Condition = DSL.trueCondition()
 
-    if (libraryIds.isNotEmpty()) c = c.and(s.LIBRARY_ID.`in`(libraryIds))
-    searchTerm?.let { c = c.and(d.TITLE.containsIgnoreCase(it)) }
-    if (mediaStatus.isNotEmpty()) c = c.and(m.STATUS.`in`(mediaStatus))
+    if (libraryIds.isNotEmpty()) c = c.and(b.LIBRARY_ID.`in`(libraryIds))
+    if (seriesIds.isNotEmpty()) c = c.and(b.SERIES_ID.`in`(seriesIds))
+    searchTerm?.let { c = c.and(b.bookMetadata().TITLE.containsIgnoreCase(it)) }
+    if (mediaStatus.isNotEmpty()) c = c.and(b.media().STATUS.`in`(mediaStatus))
 
     return c
   }
 
-  private fun String.getUrl(fullUrl: Boolean): String {
-    val path = URI(this).path
-    return if (fullUrl) path else FilenameUtils.getName(path)
-  }
+  private fun BookRecord.toDto(media: MediaDto, metadata: BookMetadataDto) =
+    BookDto(
+      id = id,
+      seriesId = seriesId,
+      libraryId = libraryId,
+      name = name,
+      url = URI(url).path,
+      number = number,
+      created = createdDate?.toUTC(),
+      lastModified = lastModifiedDate?.toUTC(),
+      fileLastModified = fileLastModified.toUTC(),
+      sizeBytes = fileSize,
+      media = media,
+      metadata = metadata
+    )
+
+  private fun MediaRecord.toDto(pageCount: Int) =
+    MediaDto(
+      status = status,
+      mediaType = mediaType ?: "",
+      pagesCount = pageCount,
+      comment = comment ?: ""
+    )
+
+  private fun BookMetadataRecord.toDto(ar: Collection<BookMetadataAuthorRecord>) =
+    BookMetadataDto(
+      title = title,
+      titleLock = titleLock,
+      summary = summary,
+      summaryLock = summaryLock,
+      number = number,
+      numberLock = numberLock,
+      numberSort = numberSort,
+      numberSortLock = numberSortLock,
+      readingDirection = readingDirection ?: "",
+      readingDirectionLock = readingDirectionLock,
+      publisher = publisher,
+      publisherLock = publisherLock,
+      ageRating = ageRating,
+      ageRatingLock = ageRatingLock,
+      releaseDate = releaseDate,
+      releaseDateLock = releaseDateLock,
+      authors = ar.filter { it.name != null }.map { AuthorDto(it.name, it.role) },
+      authorsLock = authorsLock
+    )
 
   fun LocalDateTime.toUTC(): LocalDateTime =
     atZone(ZoneId.systemDefault()).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()

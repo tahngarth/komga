@@ -385,7 +385,7 @@ class BookControllerTest(
       name = "series",
       books = listOf(book)
     ).also { it.library = library }
-    seriesRepository.save(series)
+    seriesRepository.saveAndFlush(series)
 
     val url = "/api/v1/books/${series.books.first().id}/thumbnail"
 

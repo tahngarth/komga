@@ -50,6 +50,11 @@ class Book(
   @JoinColumn(name = "series_id", nullable = false)
   lateinit var series: Series
 
+  @NotNull
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "library_id", nullable = false)
+  lateinit var library: Library
+
   @OneToOne(optional = false, orphanRemoval = true, cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
   @JoinColumn(name = "media_id", nullable = false)
   var media: Media = Media()

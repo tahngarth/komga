@@ -36,6 +36,10 @@ class TaskReceiver(
     }
   }
 
+  fun analyzeBook(bookId: Long) {
+    submitTask(Task.AnalyzeBook(bookId))
+  }
+
   fun analyzeBook(book: Book) {
     submitTask(Task.AnalyzeBook(book.id))
   }

@@ -18,17 +18,6 @@ interface BookRepository : JpaRepository<Book, Long>, JpaSpecificationExecutor<B
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
   override fun findAll(pageable: Pageable): Page<Book>
 
-  @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findAllBySeriesId(seriesId: Long, pageable: Pageable): Page<Book>
-
-  @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findAllByMediaStatusInAndSeriesId(status: Collection<Media.Status>, seriesId: Long, pageable: Pageable): Page<Book>
-
-  @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
-  fun findBySeriesLibraryIn(seriesLibrary: Collection<Library>, pageable: Pageable): Page<Book>
-  fun findBySeriesLibraryIdIn(seriesLibrary: Collection<Long>, pageable: Pageable): Page<Book>
-
-  fun findBySeriesLibraryIn(seriesLibrary: Collection<Library>): List<Book>
   fun findBySeriesLibrary(seriesLibrary: Library): List<Book>
 
   fun findByUrl(url: URL): Book?

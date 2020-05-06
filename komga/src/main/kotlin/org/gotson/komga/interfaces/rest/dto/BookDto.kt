@@ -13,6 +13,7 @@ import java.time.LocalDateTime
 data class BookDto(
   val id: Long,
   val seriesId: Long,
+  val libraryId: Long,
   val name: String,
   val url: String,
   val number: Int,
@@ -27,6 +28,9 @@ data class BookDto(
   val media: MediaDto,
   val metadata: BookMetadataDto
 )
+
+fun BookDto.restrictUrl(restrict: Boolean) =
+  if (restrict) copy(url = FilenameUtils.getName(url)) else this
 
 data class MediaDto(
   val status: String,
@@ -66,6 +70,7 @@ fun Book.toDto(includeFullUrl: Boolean) =
   BookDto(
     id = id,
     seriesId = series.id,
+    libraryId = library.id,
     name = name,
     url = if (includeFullUrl) url.toURI().path else FilenameUtils.getName(url.toURI().path),
     number = number,

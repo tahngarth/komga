@@ -1,8 +1,5 @@
 package org.gotson.komga.interfaces.rest
 
-import com.github.klinq.jpaspec.`in`
-import com.github.klinq.jpaspec.likeLower
-import com.github.klinq.jpaspec.toJoin
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -13,12 +10,9 @@ import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.Book
-import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.ImageConversionException
-import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.MediaNotReadyException
-import org.gotson.komga.domain.model.Series
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.infrastructure.image.ImageType
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
@@ -27,6 +21,7 @@ import org.gotson.komga.infrastructure.swagger.PageableWithoutSortAsQueryParam
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.PageDto
+import org.gotson.komga.interfaces.rest.dto.restrictUrl
 import org.gotson.komga.interfaces.rest.dto.toDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.BookSearch
@@ -35,7 +30,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
-import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.CacheControl
 import org.springframework.http.ContentDisposition
@@ -60,7 +54,6 @@ import java.io.FileNotFoundException
 import java.nio.file.NoSuchFileException
 import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
-import javax.persistence.criteria.JoinType
 import javax.validation.Valid
 
 private val logger = KotlinLogging.logger {}
@@ -90,56 +83,6 @@ class BookController(
       else Sort.by(Sort.Order.asc("metadata.title").ignoreCase())
     )
 
-    return mutableListOf<Specification<Book>>().let { specs ->
-      when {
-        // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
-        !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> {
-          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibrariesIds)
-          if (authorizedLibraryIDs.isEmpty()) return@let Page.empty<Book>(pageRequest)
-          else specs.add(Book::series.toJoin().join(Series::library, JoinType.INNER).where(Library::id).`in`(authorizedLibraryIDs))
-        }
-
-        // limited user: filter on user's authorized libraries
-        !principal.user.sharedAllLibraries -> specs.add(Book::series.toJoin().join(Series::library, JoinType.INNER).where(Library::id).`in`(principal.user.sharedLibrariesIds))
-
-        // non-limited user: filter on provided libraries
-        !libraryIds.isNullOrEmpty() -> {
-          specs.add(Book::series.toJoin().join(Series::library, JoinType.INNER).where(Library::id).`in`(libraryIds))
-        }
-      }
-
-      if (!searchTerm.isNullOrEmpty()) {
-        specs.add(Book::metadata.toJoin().where(BookMetadata::title).likeLower("%$searchTerm%"))
-      }
-
-      if (!mediaStatus.isNullOrEmpty()) {
-        specs.add(Book::media.toJoin().where(Media::status).`in`(mediaStatus))
-      }
-
-      if (specs.isNotEmpty()) {
-        bookRepository.findAll(specs.reduce { acc, spec -> acc.and(spec)!! }, pageRequest)
-      } else {
-        bookRepository.findAll(pageRequest)
-      }
-    }.map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
-  }
-
-  @PageableAsQueryParam
-  @GetMapping("api/v1/books2")
-  fun getAllBooks2(
-    @AuthenticationPrincipal principal: KomgaPrincipal,
-    @RequestParam(name = "search", required = false) searchTerm: String?,
-    @RequestParam(name = "library_id", required = false) libraryIds: List<Long>?,
-    @RequestParam(name = "media_status", required = false) mediaStatus: List<Media.Status>?,
-    @Parameter(hidden = true) page: Pageable
-  ): Page<BookDto> {
-    val pageRequest = PageRequest.of(
-      page.pageNumber,
-      page.pageSize,
-      if (page.sort.isSorted) Sort.by(page.sort.map { it.ignoreCase() }.toList())
-      else Sort.by(Sort.Order.asc("metadata.title").ignoreCase())
-    )
-
     val filterLibraryIds = when {
       // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
       !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> libraryIds.intersect(principal.user.sharedLibrariesIds)
@@ -156,18 +99,18 @@ class BookController(
     val bookSearch = BookSearch(
       libraryIds = filterLibraryIds,
       searchTerm = searchTerm,
-      mediaStatus = mediaStatus ?: emptyList(),
-      includeFullUrl = principal.user.roleAdmin
+      mediaStatus = mediaStatus ?: emptyList()
     )
 
     return bookDtoRepository.findAll(bookSearch, pageRequest)
+      .map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
 
   @Operation(description = "Return newly added or updated books.")
   @PageableWithoutSortAsQueryParam
   @GetMapping("api/v1/books/latest")
-  fun getLatestSeries(
+  fun getLatestBooks(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @Parameter(hidden = true) page: Pageable
   ): Page<BookDto> {
@@ -177,11 +120,14 @@ class BookController(
       Sort.by(Sort.Direction.DESC, "lastModifiedDate")
     )
 
-    return if (principal.user.sharedAllLibraries) {
-      bookRepository.findAll(pageRequest)
-    } else {
-      bookRepository.findBySeriesLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
-    }.map { it.toDto(includeFullUrl = principal.user.roleAdmin) }
+    val libraryIds = if (principal.user.sharedAllLibraries) emptyList<Long>() else principal.user.sharedLibrariesIds
+
+    return bookDtoRepository.findAll(
+      BookSearch(
+        libraryIds = libraryIds
+      ),
+      pageRequest
+    ).map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
 
@@ -190,41 +136,34 @@ class BookController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
   ): BookDto =
-    bookRepository.findByIdOrNull(bookId)?.let {
-      if (!principal.user.canAccessBook(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      it.toDto(includeFullUrl = principal.user.roleAdmin)
+    bookDtoRepository.findByIdOrNull(bookId)?.let {
+      if (!principal.user.canAccessLibrary(it.libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+      it.restrictUrl(!principal.user.roleAdmin)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @GetMapping("api/v1/books/{bookId}/previous")
   fun getBookSiblingPrevious(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
-  ): BookDto =
-    bookRepository.findByIdOrNull(bookId)?.let { book ->
-      if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-
-      val previousBook = book.series.books
-        .sortedByDescending { it.metadata.numberSort }
-        .find { it.metadata.numberSort < book.metadata.numberSort }
-
-      previousBook?.toDto(includeFullUrl = principal.user.roleAdmin)
-        ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  ): BookDto {
+    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    return bookDtoRepository.findPreviousInSeries(bookId)
+      ?.restrictUrl(!principal.user.roleAdmin)
+      ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  }
 
   @GetMapping("api/v1/books/{bookId}/next")
   fun getBookSiblingNext(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
-  ): BookDto =
-    bookRepository.findByIdOrNull(bookId)?.let { book ->
-      if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-
-      val nextBook = book.series.books
-        .sortedBy { it.metadata.numberSort }
-        .find { it.metadata.numberSort > book.metadata.numberSort }
-
-      nextBook?.toDto(includeFullUrl = principal.user.roleAdmin) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  ): BookDto {
+    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    return bookDtoRepository.findNextInSeries(bookId)
+      ?.restrictUrl(!principal.user.roleAdmin)
+      ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  }
 
 
   @ApiResponse(content = [Content(schema = Schema(type = "string", format = "binary"))])
@@ -235,15 +174,15 @@ class BookController(
   fun getBookThumbnail(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
-  ): ResponseEntity<ByteArray> =
-    bookRepository.findByIdOrNull(bookId)?.let { book ->
-      if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      if (book.media.thumbnail != null) {
-        ResponseEntity.ok()
-          .setCachePrivate()
-          .body(book.media.thumbnail)
-      } else throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  ): ResponseEntity<ByteArray> {
+    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    return bookDtoRepository.getThumbnail(bookId)?.let {
+      ResponseEntity.ok()
+        .setCachePrivate()
+        .body(it)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  }
 
   @Operation(description = "Download the book file.")
   @GetMapping(value = [

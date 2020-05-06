@@ -63,10 +63,11 @@ class LibraryLifecycle(
     seriesRepository.deleteByLibraryId(library.id)
 
     logger.info { "Remove shared library access for all users" }
-    userRepository.findBySharedLibrariesContaining(library).let { users ->
+//    userRepository.findBySharedLibrariesContaining(library).let { users ->
+    //TODO: fix this, by migrating the LibraryRepository to jOOQ for example ;)
 //      users.forEach { user -> user.sharedLibraries.removeIf { it.id == library.id } }
-      userRepository.saveAll(users)
-    }
+//      userRepository.saveAll(users)
+//    }
 
     libraryRepository.delete(library)
   }
