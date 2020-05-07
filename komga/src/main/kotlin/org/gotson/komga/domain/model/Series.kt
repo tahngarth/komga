@@ -14,7 +14,6 @@ import javax.persistence.FetchType
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
 import javax.persistence.JoinColumn
-import javax.persistence.ManyToOne
 import javax.persistence.OneToMany
 import javax.persistence.OneToOne
 import javax.persistence.PrePersist
@@ -48,9 +47,7 @@ class Series(
   var id: Long = 0
 
   @NotNull
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "library_id", nullable = false)
-  lateinit var library: Library
+  var libraryId: Long = 0L
 
   @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.LAZY, orphanRemoval = true, mappedBy = "series")
   @Cache(usage = CacheConcurrencyStrategy.READ_WRITE, region = "cache.series.collection.books")
@@ -62,7 +59,7 @@ class Series(
       _books.clear()
       value.forEach {
         it.series = this
-        if (this::library.isInitialized) it.library = library
+        it.libraryId = libraryId
       }
       _books.addAll(value.sortedWith(compareBy(natSortComparator) { it.name }))
       _books.forEachIndexed { index, book -> book.number = index + 1 }
@@ -78,7 +75,7 @@ class Series(
 
   @PrePersist
   fun beforeSave() {
-    books.forEach { it.library = this.library }
+    books.forEach { it.libraryId = libraryId }
   }
 
   override fun toString(): String = "Series($id, ${url.toURI().path})"

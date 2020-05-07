@@ -38,7 +38,7 @@ data class SeriesMetadataDto(
 
 fun Series.toDto(includeUrl: Boolean) = SeriesDto(
   id = id,
-  libraryId = library.id,
+  libraryId = libraryId,
   name = name,
   url = if (includeUrl) url.toURI().path else "",
   created = createdDate?.toUTC(),

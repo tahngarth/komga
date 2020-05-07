@@ -69,7 +69,7 @@ class TaskHandlerTest(
   @Test
   fun `when similar tasks are submitted then only a few are executed`() {
     val book = makeBook("book")
-    val series = makeSeries("series", listOf(book)).also { it.library = library }
+    val series = makeSeries("series", listOf(book)).also { it.libraryId = library.id }
     seriesRepository.save(series)
 
     every { mockMetadataLifecycle.refreshMetadata(any()) } answers { Thread.sleep(1_000) }

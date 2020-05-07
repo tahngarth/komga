@@ -84,7 +84,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val otherLibrary = libraryRepository.insert(makeLibrary("other"))
@@ -92,7 +92,7 @@ class BookControllerTest(
       val otherSeries = makeSeries(
         name = "otherSeries",
         books = listOf(makeBook("2"))
-      ).also { it.library = otherLibrary }
+      ).also { it.libraryId = otherLibrary.id }
       seriesRepository.save(otherSeries)
 
       mockMvc.get("/api/v1/books")
@@ -113,7 +113,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -127,7 +127,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -141,7 +141,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -155,7 +155,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -169,7 +169,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -186,7 +186,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -200,7 +200,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -215,7 +215,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1").also { it.media.status = status })
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -230,7 +230,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1").also { it.media.status = status })
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
       val book = series.books.first()
 
@@ -249,7 +249,7 @@ class BookControllerTest(
         it.media.pages = listOf(BookPage("file", "image/jpeg"))
         it.media.status = Media.Status.READY
       })
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
     val book = series.books.first()
 
@@ -265,7 +265,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1.cbr"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val validation: MockMvcResultMatchersDsl.() -> Unit = {
@@ -295,7 +295,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1.cbr"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val url = "/1.cbr"
@@ -331,7 +331,7 @@ class BookControllerTest(
         books = listOf(makeBook("1.cbr").also {
           it.media.thumbnail = Random.nextBytes(100)
         })
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val url = "/api/v1/books/${series.books.first().id}/thumbnail"
@@ -354,7 +354,7 @@ class BookControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1.cbr"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val url = "/api/v1/books/${series.books.first().id}/pages/1"
@@ -383,7 +383,7 @@ class BookControllerTest(
     val series = makeSeries(
       name = "series",
       books = listOf(book)
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.saveAndFlush(series)
 
     val url = "/api/v1/books/${series.books.first().id}/thumbnail"
@@ -443,7 +443,7 @@ class BookControllerTest(
     val series = makeSeries(
       name = "series",
       books = listOf(makeBook("1.cbr"))
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
     val bookId = series.books.first().id
 
@@ -530,7 +530,7 @@ class BookControllerTest(
         it.metadata.authors.add(Author("Author", "role"))
         it.metadata.releaseDate = testDate
       })
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
     val bookId = series.books.first().id
 
@@ -591,7 +591,7 @@ class BookControllerTest(
           title = "title"
         }
       })
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
     val bookId = series.books.first().id
 

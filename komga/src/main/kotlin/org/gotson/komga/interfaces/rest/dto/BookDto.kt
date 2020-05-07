@@ -70,7 +70,7 @@ fun Book.toDto(includeFullUrl: Boolean) =
   BookDto(
     id = id,
     seriesId = series.id,
-    libraryId = library.id,
+    libraryId = libraryId,
     name = name,
     url = if (includeFullUrl) url.toURI().path else FilenameUtils.getName(url.toURI().path),
     number = number,

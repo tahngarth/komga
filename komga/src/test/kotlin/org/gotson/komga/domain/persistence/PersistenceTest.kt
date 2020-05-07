@@ -48,7 +48,7 @@ class PersistenceTest(
   @Test
   fun `given series with book when saving then media is also saved`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
 
     // when
     seriesRepository.save(series)
@@ -67,7 +67,7 @@ class PersistenceTest(
       makeBook("book 05"),
       makeBook("book 6"),
       makeBook("book 002")
-    )).also { it.library = library }
+    )).also { it.libraryId = library.id }
 
     // when
     seriesRepository.save(series)
@@ -82,7 +82,7 @@ class PersistenceTest(
   @Test
   fun `given existing book when updating media then new media is saved`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
     seriesRepository.save(series)
 
     // when

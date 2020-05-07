@@ -82,10 +82,9 @@ class LibraryDao(
   private fun LibraryRecord.toDomain() =
     Library(
       name = name,
-      root = URL(root)
-    ).also {
-      it.createdDate = this.createdDate
-      it.lastModifiedDate = this.lastModifiedDate
-      it.id = this.id
-    }
+      root = URL(root),
+      id = id,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 }

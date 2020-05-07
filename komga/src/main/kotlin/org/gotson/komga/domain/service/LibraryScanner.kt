@@ -42,7 +42,7 @@ class LibraryScanner(
       // if series does not exist, save it
       if (existingSeries == null) {
         logger.info { "Adding new series: $newSeries" }
-        seriesRepository.save(newSeries.also { it.library = library })
+        seriesRepository.saveAndFlush(newSeries.also { it.libraryId = library.id })
       } else {
         // if series already exists, update it
         if (newSeries.fileLastModified.truncatedTo(ChronoUnit.MILLIS) != existingSeries.fileLastModified.truncatedTo(ChronoUnit.MILLIS)) {
@@ -62,7 +62,7 @@ class LibraryScanner(
             existingBook
           }.toMutableList()
 
-          seriesRepository.save(existingSeries)
+          seriesRepository.saveAndFlush(existingSeries)
         }
       }
     }

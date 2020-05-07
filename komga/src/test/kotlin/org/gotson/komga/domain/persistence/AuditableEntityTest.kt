@@ -45,7 +45,7 @@ class AuditableEntityTest(
   @Test
   fun `given series with book when saving then created and modified date is also saved`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
 
     // when
     seriesRepository.save(series)
@@ -60,7 +60,7 @@ class AuditableEntityTest(
   @Test
   fun `given existing series with book when updating series only then created date is kept and modified date is changed for series only`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
 
     seriesRepository.save(series)
 
@@ -90,7 +90,7 @@ class AuditableEntityTest(
   @Test
   fun `given existing series with book when updating book only then created date is kept and modified date is changed for book only`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
 
     seriesRepository.save(series)
 
@@ -120,7 +120,7 @@ class AuditableEntityTest(
   @Test
   fun `given existing book with media when updating media only then created date is kept and modified date is changed for media only`() {
     // given
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.library = library }
+    val series = makeSeries(name = "series", books = listOf(makeBook("book1"))).also { it.libraryId = library.id }
 
     seriesRepository.save(series)
 

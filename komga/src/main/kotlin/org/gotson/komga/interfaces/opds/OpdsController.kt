@@ -133,7 +133,7 @@ class OpdsController(
     val series =
       mutableListOf<Specification<Series>>().let { specs ->
         if (!principal.user.sharedAllLibraries) {
-          specs.add(Series::library.toJoin().where(Library::id).`in`(principal.user.sharedLibrariesIds))
+          specs.add(Series::libraryId.`in`(principal.user.sharedLibrariesIds))
         }
 
         if (!searchTerm.isNullOrEmpty()) {
@@ -244,7 +244,7 @@ class OpdsController(
       OpdsFeedNavigation(
         id = library.id.toString(),
         title = library.name,
-        updated = library.lastModifiedDate?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+        updated = library.lastModifiedDate.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
         author = komgaAuthor,
         links = listOf(
           OpdsLinkFeedNavigation(OpdsLinkRel.SELF, "${routeBase}libraries/$id"),
@@ -296,7 +296,7 @@ class OpdsController(
   private fun Library.toOpdsEntry(): OpdsEntryNavigation {
     return OpdsEntryNavigation(
       title = name,
-      updated = lastModifiedDate?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+      updated = lastModifiedDate.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
       id = id.toString(),
       content = "",
       link = OpdsLinkFeedNavigation(OpdsLinkRel.SUBSECTION, "${routeBase}libraries/$id")

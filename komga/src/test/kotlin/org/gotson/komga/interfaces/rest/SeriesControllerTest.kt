@@ -79,10 +79,10 @@ class SeriesControllerTest(
     fun `given series with titleSort when requesting via api then series are sorted by titleSort`() {
       val alpha = makeSeries("TheAlpha").also {
         it.metadata.titleSort = "Alpha, The"
-        it.library = library
+        it.libraryId = library.id
       }
       seriesRepository.save(alpha)
-      val beta = makeSeries("Beta").also { it.library = library }
+      val beta = makeSeries("Beta").also { it.libraryId = library.id }
       seriesRepository.save(beta)
 
       mockMvc.get("/api/v1/series")
@@ -96,7 +96,7 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given series when requesting via api then series are sorted insensitive of case`() {
-      val series = listOf("a", "b", "B", "C").map { makeSeries(it).also { it.library = library } }
+      val series = listOf("a", "b", "B", "C").map { makeSeries(it).also { it.libraryId = library.id } }
       seriesRepository.saveAll(series)
 
       mockMvc.get("/api/v1/series") {
@@ -120,7 +120,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"), makeBook("3"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       series.books = series.books.toMutableList().also { it.add(makeBook("2")) }
@@ -141,7 +141,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = (1..100 step 2).map { makeBook("$it") }
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       series.books = series.books.toMutableList().also { it.add(makeBook("2")) }
@@ -166,7 +166,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = (1..100 step 2).map { makeBook("$it") }
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       series.books = series.books.toMutableList().also { it.add(makeBook("2")) }
@@ -195,7 +195,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val otherLibrary = libraryRepository.insert(makeLibrary("other"))
@@ -203,7 +203,7 @@ class SeriesControllerTest(
       val otherSeries = makeSeries(
         name = "otherSeries",
         books = listOf(makeBook("2"))
-      ).also { it.library = otherLibrary }
+      ).also { it.libraryId = otherLibrary.id }
       seriesRepository.save(otherSeries)
 
       mockMvc.get("/api/v1/series")
@@ -223,7 +223,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       mockMvc.get("/api/v1/series/${series.id}")
@@ -236,7 +236,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       mockMvc.get("/api/v1/series/${series.id}/thumbnail")
@@ -249,7 +249,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       mockMvc.get("/api/v1/series/${series.id}/books")
@@ -265,7 +265,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       mockMvc.get("/api/v1/series/${series.id}/thumbnail")
@@ -281,7 +281,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1.cbr"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val validation: MockMvcResultMatchersDsl.() -> Unit = {
@@ -311,7 +311,7 @@ class SeriesControllerTest(
       val series = makeSeries(
         name = "series",
         books = listOf(makeBook("1.cbr"))
-      ).also { it.library = library }
+      ).also { it.libraryId = library.id }
       seriesRepository.save(series)
 
       val url = "/series"
@@ -374,7 +374,7 @@ class SeriesControllerTest(
     val series = makeSeries(
       name = "series",
       books = listOf(makeBook("1.cbr"))
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
 
     val jsonString = """
@@ -415,7 +415,7 @@ class SeriesControllerTest(
     val series = makeSeries(
       name = "series",
       books = listOf(book)
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.save(series)
 
     val url = "/api/v1/series/${series.id}/thumbnail"
@@ -446,7 +446,7 @@ class SeriesControllerTest(
     val series = makeSeries(
       name = "series",
       books = listOf(book, book2)
-    ).also { it.library = library }
+    ).also { it.libraryId = library.id }
     seriesRepository.saveAndFlush(series)
 
     val url = "/api/v1/series/${series.id}/thumbnail"
