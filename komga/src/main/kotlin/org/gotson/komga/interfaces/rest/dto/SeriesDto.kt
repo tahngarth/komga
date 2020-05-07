@@ -20,6 +20,9 @@ data class SeriesDto(
   val metadata: SeriesMetadataDto
 )
 
+fun SeriesDto.restrictUrl(restrict: Boolean) =
+  if (restrict) copy(url = "") else this
+
 data class SeriesMetadataDto(
   val status: String,
   val statusLock: Boolean,

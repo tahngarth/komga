@@ -48,6 +48,10 @@ class TaskReceiver(
     submitTask(Task.GenerateBookThumbnail(book.id))
   }
 
+  fun refreshBookMetadata(bookId: Long) {
+    submitTask(Task.RefreshBookMetadata(bookId))
+  }
+
   fun refreshBookMetadata(book: Book) {
     submitTask(Task.RefreshBookMetadata(book.id))
   }

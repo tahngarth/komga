@@ -1,8 +1,5 @@
 package org.gotson.komga.interfaces.rest
 
-import com.github.klinq.jpaspec.`in`
-import com.github.klinq.jpaspec.likeLower
-import com.github.klinq.jpaspec.toJoin
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -10,9 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import mu.KotlinLogging
 import org.gotson.komga.application.tasks.TaskReceiver
-import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
-import org.gotson.komga.domain.model.Series
 import org.gotson.komga.domain.model.SeriesMetadata
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
@@ -25,12 +20,12 @@ import org.gotson.komga.interfaces.rest.dto.restrictUrl
 import org.gotson.komga.interfaces.rest.dto.toDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.BookSearch
-import org.springdoc.api.annotations.ParameterObject
+import org.gotson.komga.interfaces.rest.persistence.SeriesDtoRepository
+import org.gotson.komga.interfaces.rest.persistence.SeriesSearch
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
-import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -55,18 +50,20 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping("api/v1/series", produces = [MediaType.APPLICATION_JSON_VALUE])
 class SeriesController(
   private val seriesRepository: SeriesRepository,
+  private val seriesDtoRepository: SeriesDtoRepository,
   private val bookDtoRepository: BookDtoRepository,
   private val bookController: BookController,
   private val taskReceiver: TaskReceiver
 ) {
 
+  @PageableAsQueryParam
   @GetMapping
   fun getAllSeries(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @RequestParam(name = "search", required = false) searchTerm: String?,
     @RequestParam(name = "library_id", required = false) libraryIds: List<Long>?,
     @RequestParam(name = "status", required = false) metadataStatus: List<SeriesMetadata.Status>?,
-    @ParameterObject page: Pageable
+    @Parameter(hidden = true) page: Pageable
   ): Page<SeriesDto> {
     val pageRequest = PageRequest.of(
       page.pageNumber,
@@ -75,38 +72,14 @@ class SeriesController(
       else Sort.by(Sort.Order.asc("metadata.titleSort").ignoreCase())
     )
 
-    return mutableListOf<Specification<Series>>().let { specs ->
-      when {
-        // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
-        !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> {
-          val authorizedLibraryIDs = libraryIds.intersect(principal.user.sharedLibrariesIds)
-          if (authorizedLibraryIDs.isEmpty()) return@let Page.empty<Series>(pageRequest)
-          else specs.add(Series::library.toJoin().where(Library::id).`in`(authorizedLibraryIDs))
-        }
+    val seriesSearch = SeriesSearch(
+      libraryIds = principal.user.getAuthorizedLibraryIds(libraryIds),
+      searchTerm = searchTerm,
+      metadataStatus = metadataStatus ?: emptyList()
+    )
 
-        // limited user: filter on user's authorized libraries
-        !principal.user.sharedAllLibraries -> specs.add(Series::library.toJoin().where(Library::id).`in`(principal.user.sharedLibrariesIds))
-
-        // non-limited user: filter on provided libraries
-        !libraryIds.isNullOrEmpty() -> {
-          specs.add(Series::library.toJoin().where(Library::id).`in`(libraryIds))
-        }
-      }
-
-      if (!searchTerm.isNullOrEmpty()) {
-        specs.add(Series::metadata.toJoin().where(SeriesMetadata::title).likeLower("%$searchTerm%"))
-      }
-
-      if (!metadataStatus.isNullOrEmpty()) {
-        specs.add(Series::metadata.toJoin().where(SeriesMetadata::status).`in`(metadataStatus))
-      }
-
-      if (specs.isNotEmpty()) {
-        seriesRepository.findAll(specs.reduce { acc, spec -> acc.and(spec)!! }, pageRequest)
-      } else {
-        seriesRepository.findAll(pageRequest)
-      }
-    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
+    return seriesDtoRepository.findAll(seriesSearch, pageRequest)
+      .map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return recently added or updated series.")
@@ -122,11 +95,12 @@ class SeriesController(
       Sort.by(Sort.Direction.DESC, "lastModifiedDate")
     )
 
-    return if (principal.user.sharedAllLibraries) {
-      seriesRepository.findAll(pageRequest)
-    } else {
-      seriesRepository.findByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
+    val libraryIds = if (principal.user.sharedAllLibraries) emptyList<Long>() else principal.user.sharedLibrariesIds
+
+    return seriesDtoRepository.findAll(
+      SeriesSearch(libraryIds = libraryIds),
+      pageRequest
+    ).map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return newly added series.")
@@ -142,11 +116,12 @@ class SeriesController(
       Sort.by(Sort.Direction.DESC, "createdDate")
     )
 
-    return if (principal.user.sharedAllLibraries) {
-      seriesRepository.findAll(pageRequest)
-    } else {
-      seriesRepository.findByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
+    val libraryIds = if (principal.user.sharedAllLibraries) emptyList<Long>() else principal.user.sharedLibrariesIds
+
+    return seriesDtoRepository.findAll(
+      SeriesSearch(libraryIds = libraryIds),
+      pageRequest
+    ).map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
   @Operation(description = "Return recently updated series, but not newly added ones.")
@@ -162,11 +137,12 @@ class SeriesController(
       Sort.by(Sort.Direction.DESC, "lastModifiedDate")
     )
 
-    return if (principal.user.sharedAllLibraries) {
-      seriesRepository.findRecentlyUpdated(pageRequest)
-    } else {
-      seriesRepository.findRecentlyUpdatedByLibraryIdIn(principal.user.sharedLibrariesIds, pageRequest)
-    }.map { it.toDto(includeUrl = principal.user.roleAdmin) }
+    val libraryIds = if (principal.user.sharedAllLibraries) emptyList<Long>() else principal.user.sharedLibrariesIds
+
+    return seriesDtoRepository.findRecentlyUpdated(
+      SeriesSearch(libraryIds = libraryIds),
+      pageRequest
+    ).map { it.restrictUrl(!principal.user.roleAdmin) }
   }
 
   @GetMapping("{seriesId}")
@@ -174,23 +150,19 @@ class SeriesController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable(name = "seriesId") id: Long
   ): SeriesDto =
-    seriesRepository.findByIdOrNull(id)?.let {
-      if (!principal.user.canAccessSeries(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      it.toDto(includeUrl = principal.user.roleAdmin)
+    seriesDtoRepository.findByIdOrNull(id)?.let {
+      if (!principal.user.canAccessLibrary(it.libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+      it.restrictUrl(!principal.user.roleAdmin)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @ApiResponse(content = [Content(schema = Schema(type = "string", format = "binary"))])
   @GetMapping(value = ["{seriesId}/thumbnail"], produces = [MediaType.IMAGE_JPEG_VALUE])
   fun getSeriesThumbnail(
     @AuthenticationPrincipal principal: KomgaPrincipal,
-    @PathVariable(name = "seriesId") id: Long
+    @PathVariable(name = "seriesId") seriesId: Long
   ): ResponseEntity<ByteArray> =
-    seriesRepository.findByIdOrNull(id)?.let { series ->
-      if (!principal.user.canAccessSeries(series)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-
-      series.books.minBy { it.metadata.numberSort }?.let { firstBook ->
-        bookController.getBookThumbnail(principal, firstBook.id)
-      } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    bookDtoRepository.findFirstIdInSeries(seriesId)?.let {
+      bookController.getBookThumbnail(principal, it)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @PageableAsQueryParam
@@ -201,9 +173,8 @@ class SeriesController(
     @RequestParam(name = "media_status", required = false) mediaStatus: List<Media.Status>?,
     @Parameter(hidden = true) page: Pageable
   ): Page<BookDto> {
-    seriesRepository.findByIdOrNull(id)?.let {
-      if (!principal.user.canAccessSeries(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    val libraryId = seriesDtoRepository.getLibraryId(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
 
     val pageRequest = PageRequest.of(
       page.pageNumber,
@@ -225,8 +196,8 @@ class SeriesController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun analyze(@PathVariable seriesId: Long) {
-    seriesRepository.findByIdOrNull(seriesId)?.let { series ->
-      series.books.forEach { taskReceiver.analyzeBook(it) }
+    bookDtoRepository.findIdBySeriesId(seriesId)?.forEach {
+      taskReceiver.analyzeBook(it)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
   }
 
@@ -234,8 +205,8 @@ class SeriesController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun refreshMetadata(@PathVariable seriesId: Long) {
-    seriesRepository.findByIdOrNull(seriesId)?.let { series ->
-      series.books.forEach { taskReceiver.refreshBookMetadata(it) }
+    bookDtoRepository.findIdBySeriesId(seriesId)?.forEach {
+      taskReceiver.refreshBookMetadata(it)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
   }
 

@@ -21,10 +21,7 @@ import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Component
-import java.net.URI
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
+import java.net.URL
 
 @Component
 class BookDao(
@@ -62,10 +59,7 @@ class BookDao(
       .where(conditions)
       .fetchOne(0, Int::class.java)
 
-    val orderBy = pageable.sort.mapNotNull {
-      val f = sorts[it.property]
-      if (it.isAscending) f?.asc() else f?.desc()
-    }
+    val orderBy = pageable.toOrderBy(sorts)
 
     val dtos = selectBase()
       .where(conditions)
@@ -104,6 +98,21 @@ class BookDao(
   override fun findPreviousInSeries(bookId: Long): BookDto? = findSibling(bookId, next = false)
 
   override fun findNextInSeries(bookId: Long): BookDto? = findSibling(bookId, next = true)
+
+  override fun findFirstIdInSeries(seriesId: Long): Long? =
+    dsl.select(b.ID)
+      .from(b)
+      .where(b.SERIES_ID.eq(seriesId))
+      .orderBy(b.bookMetadata().NUMBER_SORT)
+      .limit(1)
+      .fetchOne(0, Long::class.java)
+
+  override fun findIdBySeriesId(seriesId: Long): Collection<Long>? =
+    dsl.select(b.ID)
+      .from(b)
+      .where(b.SERIES_ID.eq(seriesId))
+      .fetch(0, Long::class.java)
+
 
   private fun findSibling(bookId: Long, next: Boolean): BookDto? {
     val record = dsl.select(b.SERIES_ID, b.bookMetadata().NUMBER_SORT)
@@ -158,7 +167,7 @@ class BookDao(
       seriesId = seriesId,
       libraryId = libraryId,
       name = name,
-      url = URI(url).path,
+      url = URL(url).toURI().path,
       number = number,
       created = createdDate?.toUTC(),
       lastModified = lastModifiedDate?.toUTC(),
@@ -197,8 +206,4 @@ class BookDao(
       authors = ar.filter { it.name != null }.map { AuthorDto(it.name, it.role) },
       authorsLock = authorsLock
     )
-
-  fun LocalDateTime.toUTC(): LocalDateTime =
-    atZone(ZoneId.systemDefault()).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime()
-
 }

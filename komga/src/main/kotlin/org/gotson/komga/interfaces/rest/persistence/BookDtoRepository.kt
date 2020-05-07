@@ -8,10 +8,14 @@ import org.springframework.data.domain.Pageable
 interface BookDtoRepository {
   fun findAll(search: BookSearch, pageable: Pageable): Page<BookDto>
   fun findByIdOrNull(bookId: Long): BookDto?
-  fun getLibraryId(bookId: Long): Long?
-  fun getThumbnail(bookId: Long): ByteArray?
   fun findPreviousInSeries(bookId: Long): BookDto?
   fun findNextInSeries(bookId: Long): BookDto?
+
+  // to move to BookRepository later on
+  fun getLibraryId(bookId: Long): Long?
+  fun getThumbnail(bookId: Long): ByteArray?
+  fun findFirstIdInSeries(seriesId: Long): Long?
+  fun findIdBySeriesId(seriesId: Long): Collection<Long>?
 }
 
 data class BookSearch(

@@ -83,21 +83,8 @@ class BookController(
       else Sort.by(Sort.Order.asc("metadata.title").ignoreCase())
     )
 
-    val filterLibraryIds = when {
-      // limited user & libraryIds are specified: filter on provided libraries intersecting user's authorized libraries
-      !principal.user.sharedAllLibraries && !libraryIds.isNullOrEmpty() -> libraryIds.intersect(principal.user.sharedLibrariesIds)
-
-      // limited user: filter on user's authorized libraries
-      !principal.user.sharedAllLibraries -> principal.user.sharedLibrariesIds
-
-      // non-limited user: filter on provided libraries
-      !libraryIds.isNullOrEmpty() -> libraryIds
-
-      else -> emptyList()
-    }
-
     val bookSearch = BookSearch(
-      libraryIds = filterLibraryIds,
+      libraryIds = principal.user.getAuthorizedLibraryIds(libraryIds),
       searchTerm = searchTerm,
       mediaStatus = mediaStatus ?: emptyList()
     )

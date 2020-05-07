@@ -77,7 +77,7 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given series with titleSort when requesting via api then series are sorted by titleSort`() {
-      val alpha = makeSeries("The Alpha").also {
+      val alpha = makeSeries("TheAlpha").also {
         it.metadata.titleSort = "Alpha, The"
         it.library = library
       }
@@ -88,7 +88,7 @@ class SeriesControllerTest(
       mockMvc.get("/api/v1/series")
         .andExpect {
           status { isOk }
-          jsonPath("$.content[0].metadata.title") { value("The Alpha") }
+          jsonPath("$.content[0].metadata.title") { value("TheAlpha") }
           jsonPath("$.content[1].metadata.title") { value("Beta") }
         }
     }
