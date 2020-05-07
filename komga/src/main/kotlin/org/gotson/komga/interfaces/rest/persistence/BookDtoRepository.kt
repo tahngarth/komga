@@ -15,7 +15,9 @@ interface BookDtoRepository {
   fun getLibraryId(bookId: Long): Long?
   fun getThumbnail(bookId: Long): ByteArray?
   fun findFirstIdInSeries(seriesId: Long): Long?
-  fun findIdBySeriesId(seriesId: Long): Collection<Long>?
+  fun findAllIdBySeriesId(seriesId: Long): Collection<Long>
+  fun findAllIdByLibraryId(libraryId: Long): Collection<Long>
+  fun findAllId(bookSearch: BookSearch = BookSearch()): Collection<Long>
 }
 
 data class BookSearch(

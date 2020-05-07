@@ -21,17 +21,17 @@ class KomgaUserDaoTest(
   @Autowired private val libraryRepository: LibraryRepository
 ) {
 
-  private val library = makeLibrary()
+  private var library = makeLibrary()
 
   @BeforeAll
   fun setup() {
-    libraryRepository.saveAndFlush(library)
+    library = libraryRepository.insert(library)
   }
 
   @AfterAll
   fun tearDown() {
     komgaUserDao.findAll().forEach { komgaUserDao.delete(it) }
-    libraryRepository.delete(library)
+    libraryRepository.deleteAll()
 
     assertThat(komgaUserDao.count()).isEqualTo(0)
   }

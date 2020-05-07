@@ -107,11 +107,26 @@ class BookDao(
       .limit(1)
       .fetchOne(0, Long::class.java)
 
-  override fun findIdBySeriesId(seriesId: Long): Collection<Long>? =
+  override fun findAllIdBySeriesId(seriesId: Long): Collection<Long> =
     dsl.select(b.ID)
       .from(b)
       .where(b.SERIES_ID.eq(seriesId))
       .fetch(0, Long::class.java)
+
+  override fun findAllIdByLibraryId(libraryId: Long): Collection<Long> =
+    dsl.select(b.ID)
+      .from(b)
+      .where(b.LIBRARY_ID.eq(libraryId))
+      .fetch(0, Long::class.java)
+
+  override fun findAllId(bookSearch: BookSearch): Collection<Long> {
+    val conditions = bookSearch.toCondition()
+
+    return dsl.select(b.ID)
+      .from(b)
+      .where(conditions)
+      .fetch(0, Long::class.java)
+  }
 
 
   private fun findSibling(bookId: Long, next: Boolean): BookDto? {

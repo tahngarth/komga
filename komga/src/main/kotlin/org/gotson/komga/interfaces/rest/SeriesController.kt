@@ -196,18 +196,18 @@ class SeriesController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun analyze(@PathVariable seriesId: Long) {
-    bookDtoRepository.findIdBySeriesId(seriesId)?.forEach {
+    bookDtoRepository.findAllIdBySeriesId(seriesId).forEach {
       taskReceiver.analyzeBook(it)
-    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    }
   }
 
   @PostMapping("{seriesId}/metadata/refresh")
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun refreshMetadata(@PathVariable seriesId: Long) {
-    bookDtoRepository.findIdBySeriesId(seriesId)?.forEach {
+    bookDtoRepository.findAllIdBySeriesId(seriesId).forEach {
       taskReceiver.refreshBookMetadata(it)
-    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    }
   }
 
   @PatchMapping("{seriesId}/metadata")

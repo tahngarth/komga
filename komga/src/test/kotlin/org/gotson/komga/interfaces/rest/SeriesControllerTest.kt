@@ -53,13 +53,13 @@ class SeriesControllerTest(
     this.jdbcTemplate = JdbcTemplate(dataSource)
   }
 
-  private val library = makeLibrary()
+  private var library = makeLibrary()
 
   @BeforeAll
   fun `setup library`() {
     jdbcTemplate.execute("ALTER SEQUENCE hibernate_sequence RESTART WITH 1")
 
-    libraryRepository.save(library)
+    library = libraryRepository.insert(library)
   }
 
   @AfterAll
@@ -198,8 +198,7 @@ class SeriesControllerTest(
       ).also { it.library = library }
       seriesRepository.save(series)
 
-      val otherLibrary = makeLibrary("other")
-      libraryRepository.save(otherLibrary)
+      val otherLibrary = libraryRepository.insert(makeLibrary("other"))
 
       val otherSeries = makeSeries(
         name = "otherSeries",

@@ -27,11 +27,11 @@ class LibraryControllerTest(
 ) {
   private val route = "/api/v1/libraries"
 
-  private val library = makeLibrary(url = "file:/library1")
+  private var library = makeLibrary(url = "file:/library1")
 
   @BeforeAll
   fun `setup library`() {
-    libraryRepository.save(library)
+    library = libraryRepository.insert(library)
   }
 
   @AfterAll

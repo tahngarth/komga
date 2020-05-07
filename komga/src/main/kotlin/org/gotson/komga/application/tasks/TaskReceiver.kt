@@ -4,12 +4,13 @@ import mu.KotlinLogging
 import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
-import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_UNIQUE_ID
+import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
+import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.springframework.jms.core.JmsTemplate
 import org.springframework.stereotype.Service
 
@@ -19,20 +20,23 @@ private val logger = KotlinLogging.logger {}
 class TaskReceiver(
   private val jmsTemplate: JmsTemplate,
   private val libraryRepository: LibraryRepository,
-  private val bookRepository: BookRepository
+  private val bookDtoRepository: BookDtoRepository //TODO: replace with non-DTO interface
 ) {
 
   fun scanLibraries() {
-    libraryRepository.findAll().forEach { scanLibrary(it) }
+    libraryRepository.findAll().forEach { scanLibrary(it.id) }
   }
 
-  fun scanLibrary(library: Library) {
-    submitTask(Task.ScanLibrary(library.id))
+  fun scanLibrary(libraryId: Long) {
+    submitTask(Task.ScanLibrary(libraryId))
   }
 
   fun analyzeUnknownBooks(library: Library) {
-    bookRepository.findAllByMediaStatusAndSeriesLibrary(Media.Status.UNKNOWN, library).forEach {
-      submitTask(Task.AnalyzeBook(it.id))
+    bookDtoRepository.findAllId(BookSearch(
+      libraryIds = listOf(library.id),
+      mediaStatus = listOf(Media.Status.UNKNOWN)
+    )).forEach {
+      submitTask(Task.AnalyzeBook(it))
     }
   }
 
@@ -44,8 +48,8 @@ class TaskReceiver(
     submitTask(Task.AnalyzeBook(book.id))
   }
 
-  fun generateBookThumbnail(book: Book) {
-    submitTask(Task.GenerateBookThumbnail(book.id))
+  fun generateBookThumbnail(bookId: Long) {
+    submitTask(Task.GenerateBookThumbnail(bookId))
   }
 
   fun refreshBookMetadata(bookId: Long) {

@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.junit.jupiter.SpringExtension
+import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
@@ -45,6 +46,7 @@ class LibraryScannerTest(
 
   @AfterEach
   fun `clear repositories`() {
+    if (TestTransaction.isActive()) TestTransaction.end()
     seriesRepository.deleteAll()
     libraryRepository.deleteAll()
   }
@@ -53,7 +55,7 @@ class LibraryScannerTest(
   @Transactional
   fun `given existing series when adding files and scanning then only updated Books are persisted`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     val series = makeSeries(name = "series", books = listOf(makeBook("book1")))
     val seriesWithMoreBooks = makeSeries(name = "series", books = listOf(makeBook("book1"), makeBook("book2")))
@@ -81,7 +83,7 @@ class LibraryScannerTest(
   @Transactional
   fun `given existing series when removing files and scanning then only updated Books are persisted`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     val series = makeSeries(name = "series", books = listOf(makeBook("book1"), makeBook("book2")))
     val seriesWithLessBooks = makeSeries(name = "series", books = listOf(makeBook("book1")))
@@ -111,7 +113,7 @@ class LibraryScannerTest(
   @Transactional
   fun `given existing series when updating files and scanning then Books are updated`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     val series = makeSeries(name = "series", books = listOf(makeBook("book1")))
     val seriesWithUpdatedBooks = makeSeries(name = "series", books = listOf(makeBook("book1")))
@@ -141,7 +143,7 @@ class LibraryScannerTest(
   @Test
   fun `given existing series when deleting all books and scanning then Series and Books are removed`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
@@ -163,7 +165,7 @@ class LibraryScannerTest(
   @Test
   fun `given existing Series when deleting all books of one series and scanning then series and its Books are removed`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
@@ -185,7 +187,7 @@ class LibraryScannerTest(
   @Test
   fun `given existing Book with media when rescanning then media is kept intact`() {
     // given
-    val library = libraryRepository.save(makeLibrary())
+    val library = libraryRepository.insert(makeLibrary())
 
     val book1 = makeBook("book1")
     every { mockScanner.scanRootFolder(any()) }
@@ -218,8 +220,8 @@ class LibraryScannerTest(
   @Test
   fun `given 2 libraries when deleting all books of one and scanning then the other library is kept intact`() {
     // given
-    val library1 = libraryRepository.save(makeLibrary(name = "library1"))
-    val library2 = libraryRepository.save(makeLibrary(name = "library2"))
+    val library1 = libraryRepository.insert(makeLibrary(name = "library1"))
+    val library2 = libraryRepository.insert(makeLibrary(name = "library2"))
 
     every { mockScanner.scanRootFolder(Paths.get(library1.root.toURI())) } returns
       listOf(makeSeries(name = "series1", books = listOf(makeBook("book1"))))
