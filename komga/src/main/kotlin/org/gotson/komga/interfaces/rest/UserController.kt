@@ -67,7 +67,7 @@ class UserController(
   @PreAuthorize("hasRole('ADMIN')")
   fun addOne(@Valid @RequestBody newUser: UserCreationDto): UserDto =
     try {
-      userLifecycle.createUser(newUser.toKomgaUser()).toDto()
+      userLifecycle.createUser(newUser.toDomain()).toDto()
     } catch (e: UserEmailAlreadyExistsException) {
       throw ResponseStatusException(HttpStatus.BAD_REQUEST, "A user with this email already exists")
     }

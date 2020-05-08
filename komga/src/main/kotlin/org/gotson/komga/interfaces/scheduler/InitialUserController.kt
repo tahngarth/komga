@@ -40,7 +40,7 @@ class InitialUsersDevConfiguration {
   @Bean
   fun initialUsers(): List<KomgaUser> = listOf(
     KomgaUser("admin@example.org", "admin", roleAdmin = true),
-    KomgaUser("user@example.org", "user")
+    KomgaUser("user@example.org", "user", roleAdmin = false)
   )
 }
 

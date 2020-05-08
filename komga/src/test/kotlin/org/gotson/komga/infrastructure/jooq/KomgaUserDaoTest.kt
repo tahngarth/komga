@@ -30,7 +30,7 @@ class KomgaUserDaoTest(
 
   @AfterAll
   fun tearDown() {
-    komgaUserDao.findAll().forEach { komgaUserDao.delete(it) }
+    komgaUserDao.deleteAll()
     libraryRepository.deleteAll()
 
     assertThat(komgaUserDao.count()).isEqualTo(0)

@@ -46,7 +46,7 @@ data class UserCreationDto(
   @get:NotBlank val password: String,
   val roles: List<String> = emptyList()
 ) {
-  fun toKomgaUser(): KomgaUser =
+  fun toDomain(): KomgaUser =
     KomgaUser(email, password, roleAdmin = roles.contains("ADMIN"))
 }
 

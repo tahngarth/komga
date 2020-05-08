@@ -2,10 +2,7 @@ package org.gotson.komga.domain.persistence
 
 import org.gotson.komga.domain.model.KomgaUser
 import org.gotson.komga.domain.model.Library
-import org.springframework.data.repository.CrudRepository
 
-//@Repository
-//interface KomgaUserRepository : CrudRepository<KomgaUser, Long> {
 interface KomgaUserRepository {
   fun count(): Long
 
@@ -16,6 +13,7 @@ interface KomgaUserRepository {
   fun saveAll(users: Iterable<KomgaUser>): Iterable<KomgaUser>
 
   fun delete(user: KomgaUser)
+  fun deleteAll()
 
   fun existsByEmailIgnoreCase(email: String): Boolean
   fun findByEmailIgnoreCase(email: String): KomgaUser?

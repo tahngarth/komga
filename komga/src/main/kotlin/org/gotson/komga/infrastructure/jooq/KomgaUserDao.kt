@@ -48,35 +48,42 @@ class KomgaUserDao(
           roleAdmin = ur.roleAdmin,
           sharedLibrariesIds = lr.mapNotNull { it.id }.toSet(),
           sharedAllLibraries = ur.sharedAllLibraries,
-          id = ur.id
+          id = ur.id,
+          createdDate = ur.createdDate,
+          lastModifiedDate = ur.lastModifiedDate
         )
       }
 
   override fun save(user: KomgaUser): KomgaUser {
     val id = if (user.id == 0L) dsl.nextval(HIBERNATE_SEQUENCE) else user.id
 
-    dsl.mergeInto(u)
-      .using(dsl.selectOne())
-      .on(u.ID.eq(id))
-      .whenMatchedThenUpdate()
-      .set(u.EMAIL, user.email)
-      .set(u.PASSWORD, user.password)
-      .set(u.ROLE_ADMIN, user.roleAdmin)
-      .set(u.SHARED_ALL_LIBRARIES, user.sharedAllLibraries)
-      .set(u.LAST_MODIFIED_DATE, LocalDateTime.now())
-      .whenNotMatchedThenInsert(u.ID, u.EMAIL, u.PASSWORD, u.ROLE_ADMIN, u.SHARED_ALL_LIBRARIES)
-      .values(id, user.email, user.password, user.roleAdmin, user.sharedAllLibraries)
-      .execute()
+    dsl.transaction { config ->
+      with(config.dsl())
+      {
+        mergeInto(u)
+          .using(dsl.selectOne())
+          .on(u.ID.eq(id))
+          .whenMatchedThenUpdate()
+          .set(u.EMAIL, user.email)
+          .set(u.PASSWORD, user.password)
+          .set(u.ROLE_ADMIN, user.roleAdmin)
+          .set(u.SHARED_ALL_LIBRARIES, user.sharedAllLibraries)
+          .set(u.LAST_MODIFIED_DATE, LocalDateTime.now())
+          .whenNotMatchedThenInsert(u.ID, u.EMAIL, u.PASSWORD, u.ROLE_ADMIN, u.SHARED_ALL_LIBRARIES)
+          .values(id, user.email, user.password, user.roleAdmin, user.sharedAllLibraries)
+          .execute()
 
-    dsl.deleteFrom(ul)
-      .where(ul.USER_ID.eq(id))
-      .execute()
+        deleteFrom(ul)
+          .where(ul.USER_ID.eq(id))
+          .execute()
 
-    user.sharedLibrariesIds.forEach {
-      dsl.insertInto(ul)
-        .columns(ul.USER_ID, ul.LIBRARY_ID)
-        .values(id, it)
-        .execute()
+        user.sharedLibrariesIds.forEach {
+          insertInto(ul)
+            .columns(ul.USER_ID, ul.LIBRARY_ID)
+            .values(id, it)
+            .execute()
+        }
+      }
     }
 
     return findByIdOrNull(id)!!
@@ -85,13 +92,23 @@ class KomgaUserDao(
   override fun saveAll(users: Iterable<KomgaUser>): Iterable<KomgaUser> = users.map { save(it) }
 
   override fun delete(user: KomgaUser) {
-    dsl.deleteFrom(ul)
-      .where(ul.USER_ID.equal(user.id))
-      .execute()
+    dsl.transaction { config ->
+      with(config.dsl())
+      {
+        deleteFrom(ul).where(ul.USER_ID.equal(user.id)).execute()
+        deleteFrom(u).where(u.ID.equal(user.id)).execute()
+      }
+    }
+  }
 
-    dsl.deleteFrom(u)
-      .where(u.ID.equal(user.id))
-      .execute()
+  override fun deleteAll() {
+    dsl.transaction { config ->
+      with(config.dsl())
+      {
+        deleteFrom(ul).execute()
+        deleteFrom(u).execute()
+      }
+    }
   }
 
   override fun existsByEmailIgnoreCase(email: String): Boolean =

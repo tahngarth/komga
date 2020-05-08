@@ -1,5 +1,6 @@
 package org.gotson.komga.domain.model
 
+import java.time.LocalDateTime
 import javax.validation.constraints.Email
 import javax.validation.constraints.NotBlank
 
@@ -9,11 +10,13 @@ data class KomgaUser(
   val email: String,
   @NotBlank
   val password: String,
-  val roleAdmin: Boolean = false,
+  val roleAdmin: Boolean,
   val sharedLibrariesIds: Set<Long> = emptySet(),
   val sharedAllLibraries: Boolean = true,
-  val id: Long = 0
-) : AuditableEntity() {
+  val id: Long = 0,
+  override val createdDate: LocalDateTime = LocalDateTime.now(),
+  override val lastModifiedDate: LocalDateTime = LocalDateTime.now()
+) : Auditable() {
 
   fun roles(): Set<String> {
     val roles = mutableSetOf("USER")
