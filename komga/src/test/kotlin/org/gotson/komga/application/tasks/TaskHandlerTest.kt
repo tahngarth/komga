@@ -8,8 +8,10 @@ import org.gotson.komga.application.service.MetadataLifecycle
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
+import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
+import org.gotson.komga.domain.service.SeriesLifecycle
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
@@ -32,7 +34,9 @@ class TaskHandlerTest(
   @Autowired private val taskReceiver: TaskReceiver,
   @Autowired private val jmsTemplate: JmsTemplate,
   @Autowired private val libraryRepository: LibraryRepository,
-  @Autowired private val seriesRepository: SeriesRepository
+  @Autowired private val seriesRepository: SeriesRepository,
+  @Autowired private val bookRepository: BookRepository,
+  @Autowired private val seriesLifecycle: SeriesLifecycle
 ) {
 
   @MockkBean
@@ -56,6 +60,7 @@ class TaskHandlerTest(
 
   @AfterEach
   fun `clear repository`() {
+    bookRepository.deleteAll()
     seriesRepository.deleteAll()
   }
 
@@ -68,9 +73,9 @@ class TaskHandlerTest(
 
   @Test
   fun `when similar tasks are submitted then only a few are executed`() {
-    val book = makeBook("book")
-    val series = makeSeries("series", listOf(book)).also { it.libraryId = library.id }
-    seriesRepository.save(series)
+    val book = makeBook("book").also { it.libraryId = library.id }
+    val series = makeSeries("series").also { it.libraryId = library.id }
+    seriesLifecycle.createSeries(series, listOf(book))
 
     every { mockMetadataLifecycle.refreshMetadata(any()) } answers { Thread.sleep(1_000) }
 

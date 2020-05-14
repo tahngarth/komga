@@ -39,7 +39,7 @@ data class KomgaUser(
     }
 
   fun canAccessBook(book: Book): Boolean {
-    return sharedAllLibraries || sharedLibrariesIds.any { it == book.series.libraryId }
+    return sharedAllLibraries || sharedLibrariesIds.any { it == book.libraryId }
   }
 
   fun canAccessSeries(series: Series): Boolean {

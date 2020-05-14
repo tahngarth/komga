@@ -6,6 +6,7 @@ import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.domain.service.MetadataApplier
 import org.gotson.komga.infrastructure.metadata.BookMetadataProvider
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 
 private val logger = KotlinLogging.logger {}
@@ -26,8 +27,10 @@ class MetadataLifecycle(
         bookRepository.save(book)
 
         bPatch.series?.let { sPatch ->
-          metadataApplier.apply(sPatch, book.series)
-          seriesRepository.save(book.series)
+          seriesRepository.findByIdOrNull(book.seriesId)?.let {
+            metadataApplier.apply(sPatch, it)
+            seriesRepository.saveAndFlush(it)
+          }
         }
       }
     }

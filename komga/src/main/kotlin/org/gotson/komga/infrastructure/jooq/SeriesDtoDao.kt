@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component
 import java.net.URL
 
 @Component
-class SeriesDao(
+class SeriesDtoDao(
   private val dsl: DSLContext
 ) : SeriesDtoRepository {
 

@@ -16,7 +16,6 @@ import javax.persistence.FetchType
 import javax.persistence.GeneratedValue
 import javax.persistence.Id
 import javax.persistence.JoinColumn
-import javax.persistence.ManyToOne
 import javax.persistence.OneToOne
 import javax.persistence.Table
 import javax.validation.constraints.NotBlank
@@ -45,10 +44,7 @@ class Book(
   @Column(name = "id", nullable = false)
   var id: Long = 0
 
-  @NotNull
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "series_id", nullable = false)
-  lateinit var series: Series
+  var seriesId: Long = 0
 
   @NotNull
   var libraryId: Long = 0

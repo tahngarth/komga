@@ -9,6 +9,7 @@ import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.Series
 import org.gotson.komga.domain.model.SeriesMetadata
+import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
@@ -64,7 +65,8 @@ private const val ID_LIBRARIES_ALL = "allLibraries"
 class OpdsController(
   servletContext: ServletContext,
   private val seriesRepository: SeriesRepository,
-  private val libraryRepository: LibraryRepository
+  private val libraryRepository: LibraryRepository,
+  private val bookRepository: BookRepository
 ) {
 
   private val routeBase = "${servletContext.contextPath}$ROUTE_BASE"
@@ -217,6 +219,8 @@ class OpdsController(
     seriesRepository.findByIdOrNull(id)?.let { series ->
       if (!principal.user.canAccessSeries(series)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
 
+      val books = bookRepository.findBySeriesId(series.id)
+
       OpdsFeedAcquisition(
         id = series.id.toString(),
         title = series.metadata.title,
@@ -226,7 +230,7 @@ class OpdsController(
           OpdsLinkFeedNavigation(OpdsLinkRel.SELF, "${routeBase}series/$id"),
           linkStart
         ),
-        entries = series.books
+        entries = books
           .filter { it.media.status == Media.Status.READY }
           .sortedBy { it.metadata.numberSort }
           .map { it.toOpdsEntry(shouldPrependBookNumbers(userAgent)) }

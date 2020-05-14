@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
 import java.net.URL
 
 @Component
-class BookDao(
+class BookDtoDao(
   private val dsl: DSLContext
 ) : BookDtoRepository {
 

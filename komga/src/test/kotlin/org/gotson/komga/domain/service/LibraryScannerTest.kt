@@ -47,6 +47,7 @@ class LibraryScannerTest(
   @AfterEach
   fun `clear repositories`() {
     if (TestTransaction.isActive()) TestTransaction.end()
+    bookRepository.deleteAll()
     seriesRepository.deleteAll()
     libraryRepository.deleteAll()
   }
@@ -57,12 +58,12 @@ class LibraryScannerTest(
     // given
     val library = libraryRepository.insert(makeLibrary())
 
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1")))
-    val seriesWithMoreBooks = makeSeries(name = "series", books = listOf(makeBook("book1"), makeBook("book2")))
+    val books = listOf(makeBook("book1"))
+    val moreBooks = listOf(makeBook("book1"), makeBook("book2"))
 
     every { mockScanner.scanRootFolder(any()) }.returnsMany(
-      listOf(series),
-      listOf(seriesWithMoreBooks)
+      mapOf(makeSeries(name = "series") to books),
+      mapOf(makeSeries(name = "series") to moreBooks)
     )
     libraryScanner.scanRootFolder(library)
 
@@ -71,12 +72,13 @@ class LibraryScannerTest(
 
     // then
     val allSeries = seriesRepository.findAll()
+    val allBooks = bookRepository.findAll().sortedBy { it.number }
 
     verify(exactly = 2) { mockScanner.scanRootFolder(any()) }
 
     assertThat(allSeries).hasSize(1)
-    assertThat(allSeries.first().books).hasSize(2)
-    assertThat(allSeries.first().books.map { it.name }).containsExactly("book1", "book2")
+    assertThat(allBooks).hasSize(2)
+    assertThat(allBooks.map { it.name }).containsExactly("book1", "book2")
   }
 
   @Test
@@ -85,13 +87,13 @@ class LibraryScannerTest(
     // given
     val library = libraryRepository.insert(makeLibrary())
 
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1"), makeBook("book2")))
-    val seriesWithLessBooks = makeSeries(name = "series", books = listOf(makeBook("book1")))
+    val books = listOf(makeBook("book1"), makeBook("book2"))
+    val lessBooks = listOf(makeBook("book1"))
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
-        listOf(series),
-        listOf(seriesWithLessBooks)
+        mapOf(makeSeries(name = "series") to books),
+        mapOf(makeSeries(name = "series") to lessBooks)
       )
     libraryScanner.scanRootFolder(library)
 
@@ -100,12 +102,13 @@ class LibraryScannerTest(
 
     // then
     val allSeries = seriesRepository.findAll()
+    val allBooks = bookRepository.findAll().sortedBy { it.number }
 
     verify(exactly = 2) { mockScanner.scanRootFolder(any()) }
 
     assertThat(allSeries).hasSize(1)
-    assertThat(allSeries.first().books).hasSize(1)
-    assertThat(allSeries.first().books.map { it.name }).containsExactly("book1")
+    assertThat(allBooks).hasSize(1)
+    assertThat(allBooks.map { it.name }).containsExactly("book1")
     assertThat(bookRepository.count()).describedAs("Orphan book has been removed").isEqualTo(1)
   }
 
@@ -115,13 +118,13 @@ class LibraryScannerTest(
     // given
     val library = libraryRepository.insert(makeLibrary())
 
-    val series = makeSeries(name = "series", books = listOf(makeBook("book1")))
-    val seriesWithUpdatedBooks = makeSeries(name = "series", books = listOf(makeBook("book1")))
+    val books = listOf(makeBook("book1"))
+    val updatedBooks = listOf(makeBook("book1"))
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
-        listOf(series),
-        listOf(seriesWithUpdatedBooks)
+        mapOf(makeSeries(name = "series") to books),
+        mapOf(makeSeries(name = "series") to updatedBooks)
       )
     libraryScanner.scanRootFolder(library)
 
@@ -130,14 +133,14 @@ class LibraryScannerTest(
 
     // then
     val allSeries = seriesRepository.findAll()
+    val allBooks = bookRepository.findAll()
 
     verify(exactly = 2) { mockScanner.scanRootFolder(any()) }
 
     assertThat(allSeries).hasSize(1)
-    assertThat(allSeries.first().lastModifiedDate).isNotEqualTo(allSeries.first().createdDate)
-    assertThat(allSeries.first().books).hasSize(1)
-    assertThat(allSeries.first().books.map { it.name }).containsExactly("book1")
-    assertThat(allSeries.first().books.first().lastModifiedDate).isNotEqualTo(allSeries.first().books.first().createdDate)
+    assertThat(allBooks).hasSize(1)
+    assertThat(allBooks.map { it.name }).containsExactly("book1")
+    assertThat(allBooks.first().lastModifiedDate).isNotEqualTo(allBooks.first().createdDate)
   }
 
   @Test
@@ -147,8 +150,8 @@ class LibraryScannerTest(
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
-        listOf(makeSeries(name = "series", books = listOf(makeBook("book1")))),
-        emptyList()
+        mapOf(makeSeries(name = "series") to listOf(makeBook("book1"))),
+        emptyMap()
       )
     libraryScanner.scanRootFolder(library)
 
@@ -169,8 +172,11 @@ class LibraryScannerTest(
 
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
-        listOf(makeSeries(name = "series", books = listOf(makeBook("book1"))), makeSeries(name = "series2", books = listOf(makeBook("book2")))),
-        listOf(makeSeries(name = "series", books = listOf(makeBook("book1"))))
+        mapOf(
+          makeSeries(name = "series") to listOf(makeBook("book1")),
+          makeSeries(name = "series2") to listOf(makeBook("book2"))
+        ),
+        mapOf(makeSeries(name = "series") to listOf(makeBook("book1")))
       )
     libraryScanner.scanRootFolder(library)
 
@@ -180,8 +186,8 @@ class LibraryScannerTest(
     // then
     verify(exactly = 2) { mockScanner.scanRootFolder(any()) }
 
-    assertThat(seriesRepository.count()).describedAs("Series repository should be empty").isEqualTo(1)
-    assertThat(bookRepository.count()).describedAs("Book repository should be empty").isEqualTo(1)
+    assertThat(seriesRepository.count()).describedAs("Series repository should not be empty").isEqualTo(1)
+    assertThat(bookRepository.count()).describedAs("Book repository should not be empty").isEqualTo(1)
   }
 
   @Test
@@ -192,8 +198,8 @@ class LibraryScannerTest(
     val book1 = makeBook("book1")
     every { mockScanner.scanRootFolder(any()) }
       .returnsMany(
-        listOf(makeSeries(name = "series", books = listOf(book1))),
-        listOf(makeSeries(name = "series", books = listOf(makeBook(name = "book1", fileLastModified = book1.fileLastModified))))
+        mapOf(makeSeries(name = "series") to listOf(book1)),
+        mapOf(makeSeries(name = "series") to listOf(makeBook(name = "book1", fileLastModified = book1.fileLastModified)))
       )
     libraryScanner.scanRootFolder(library)
 
@@ -224,11 +230,11 @@ class LibraryScannerTest(
     val library2 = libraryRepository.insert(makeLibrary(name = "library2"))
 
     every { mockScanner.scanRootFolder(Paths.get(library1.root.toURI())) } returns
-      listOf(makeSeries(name = "series1", books = listOf(makeBook("book1"))))
+      mapOf(makeSeries(name = "series1") to listOf(makeBook("book1")))
 
     every { mockScanner.scanRootFolder(Paths.get(library2.root.toURI())) }.returnsMany(
-      listOf(makeSeries(name = "series2", books = listOf(makeBook("book2")))),
-      emptyList()
+      mapOf(makeSeries(name = "series2") to listOf(makeBook("book2"))),
+      emptyMap()
     )
 
     libraryScanner.scanRootFolder(library1)

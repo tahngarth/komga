@@ -15,34 +15,39 @@ private val logger = KotlinLogging.logger {}
 class LibraryScanner(
   private val fileSystemScanner: FileSystemScanner,
   private val seriesRepository: SeriesRepository,
-  private val bookRepository: BookRepository
+  private val bookRepository: BookRepository,
+  private val seriesLifecycle: SeriesLifecycle
 ) {
 
   @Transactional
   fun scanRootFolder(library: Library) {
     logger.info { "Updating library: $library" }
     val scannedSeries = fileSystemScanner.scanRootFolder(Paths.get(library.root.toURI()))
+    scannedSeries.keys.forEach { it.libraryId = library.id }
+    scannedSeries.values.forEach { books -> books.forEach { it.libraryId = library.id } }
 
     // delete series that don't exist anymore
     if (scannedSeries.isEmpty()) {
       logger.info { "Scan returned no series, deleting all existing series" }
-      seriesRepository.deleteByLibraryId(library.id)
+      seriesRepository.findByLibraryId(library.id).forEach {
+        seriesLifecycle.deleteSeries(it)
+      }
     } else {
-      scannedSeries.map { it.url }.let { urls ->
+      scannedSeries.keys.map { it.url }.let { urls ->
         seriesRepository.findByLibraryIdAndUrlNotIn(library.id, urls).forEach {
           logger.info { "Deleting series not on disk anymore: $it" }
-          seriesRepository.delete(it)
+          seriesLifecycle.deleteSeries(it)
         }
       }
     }
 
-    scannedSeries.forEach { newSeries ->
+    scannedSeries.forEach { (newSeries, newBooks) ->
       val existingSeries = seriesRepository.findByLibraryIdAndUrl(library.id, newSeries.url)
 
       // if series does not exist, save it
       if (existingSeries == null) {
         logger.info { "Adding new series: $newSeries" }
-        seriesRepository.saveAndFlush(newSeries.also { it.libraryId = library.id })
+        seriesLifecycle.createSeries(newSeries, newBooks)
       } else {
         // if series already exists, update it
         if (newSeries.fileLastModified.truncatedTo(ChronoUnit.MILLIS) != existingSeries.fileLastModified.truncatedTo(ChronoUnit.MILLIS)) {
@@ -50,8 +55,11 @@ class LibraryScanner(
           existingSeries.fileLastModified = newSeries.fileLastModified
 
           // update list of books with existing entities if they exist
-          existingSeries.books = newSeries.books.map { newBook ->
-            val existingBook = bookRepository.findByUrl(newBook.url) ?: newBook
+
+          val existingBooks = bookRepository.findBySeriesId(existingSeries.id)
+
+          val newAndModifiedBooks = newBooks.map { newBook ->
+            val existingBook = existingBooks.find { it.url == newBook.url } ?: newBook
 
             if (newBook.fileLastModified.truncatedTo(ChronoUnit.MILLIS) != existingBook.fileLastModified.truncatedTo(ChronoUnit.MILLIS)) {
               logger.info { "Book changed on disk, update and reset media status: $existingBook" }
@@ -60,9 +68,9 @@ class LibraryScanner(
               existingBook.media.reset()
             }
             existingBook
-          }.toMutableList()
+          }
 
-          seriesRepository.saveAndFlush(existingSeries)
+          seriesLifecycle.updateBooksForSeries(existingSeries, newAndModifiedBooks)
         }
       }
     }

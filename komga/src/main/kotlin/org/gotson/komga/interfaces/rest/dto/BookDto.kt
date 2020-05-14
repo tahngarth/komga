@@ -69,7 +69,7 @@ data class AuthorDto(
 fun Book.toDto(includeFullUrl: Boolean) =
   BookDto(
     id = id,
-    seriesId = series.id,
+    seriesId = seriesId,
     libraryId = libraryId,
     name = name,
     url = if (includeFullUrl) url.toURI().path else FilenameUtils.getName(url.toURI().path),

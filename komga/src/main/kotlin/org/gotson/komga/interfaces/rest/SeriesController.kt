@@ -17,7 +17,6 @@ import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.SeriesDto
 import org.gotson.komga.interfaces.rest.dto.SeriesMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.restrictUrl
-import org.gotson.komga.interfaces.rest.dto.toDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.gotson.komga.interfaces.rest.persistence.SeriesDtoRepository
@@ -226,7 +225,8 @@ class SeriesController(
         titleSort?.let { series.metadata.titleSort = it }
         titleSortLock?.let { series.metadata.titleSortLock = it }
       }
-      seriesRepository.save(series).toDto(includeUrl = true)
+      val newSeries = seriesRepository.save(series)
+      seriesDtoRepository.findByIdOrNull(newSeries.id)!!
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
 }

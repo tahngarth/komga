@@ -22,6 +22,7 @@ interface SeriesRepository : JpaRepository<Series, Long>, JpaSpecificationExecut
 
   @QueryHints(QueryHint(name = CACHEABLE, value = "true"))
   fun findByLibraryId(libraryId: Long, sort: Sort): List<Series>
+  fun findByLibraryId(libraryId: Long): List<Series>
 
   fun findByLibraryIdAndUrlNotIn(libraryId: Long, urls: Collection<URL>): List<Series>
   fun findByLibraryIdAndUrl(libraryId: Long, url: URL): Series?
