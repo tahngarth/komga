@@ -124,6 +124,7 @@ dependencies {
   developmentOnly("org.springframework.boot:spring-boot-devtools")
 }
 
+val webui = "$rootDir/komga-webui"
 tasks {
   withType<KotlinCompile> {
     kotlinOptions {
@@ -150,15 +151,11 @@ tasks {
     into("$buildDir/dependency")
   }
 
-  //delete the public folder containing the webui
-  register<Delete>("deletePublic") {
-    group = "web"
-    delete("$projectDir/src/main/resources/public/")
-  }
-
   register<Exec>("npmInstall") {
     group = "web"
-    workingDir("$rootDir/komga-webui")
+    workingDir(webui)
+    inputs.file("$webui/package.json")
+    outputs.dir("$webui/node_modules")
     commandLine(
       if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         "npm.cmd"
@@ -172,7 +169,9 @@ tasks {
   register<Exec>("npmBuild") {
     group = "web"
     dependsOn("npmInstall")
-    workingDir("$rootDir/komga-webui")
+    workingDir(webui)
+    inputs.dir(webui)
+    outputs.dir("$webui/dist")
     commandLine(
       if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         "npm.cmd"
@@ -185,16 +184,21 @@ tasks {
   }
 
   //copy the webui build into public
-  register<Copy>("copyWebDist") {
+  register<Sync>("copyWebDist") {
     group = "web"
-    dependsOn("deletePublic", "npmBuild")
-    from("$rootDir/komga-webui/dist/")
+    dependsOn("npmBuild")
+    from("$webui/dist/")
     into("$projectDir/src/main/resources/public/")
   }
 }
 
 springBoot {
-  buildInfo()
+  buildInfo {
+    properties {
+      // prevent task bootBuildInfo to rerun every time
+      time = null
+    }
+  }
 }
 
 allOpen {
@@ -221,26 +225,30 @@ val jooqDb = mapOf(
   "user" to "sa",
   "password" to ""
 )
+val migrationDirs = listOf(
+  "$projectDir/src/flyway/resources/db/migration",
+  "$projectDir/src/flyway/kotlin/db/migration"
+)
 flyway {
   url = jooqDb["url"]
   user = jooqDb["user"]
   password = jooqDb["password"]
   schemas = arrayOf(jooqDb["schema"])
-  locations = arrayOf(
-    "classpath:db/migration"
-  )
+  locations = arrayOf("classpath:db/migration")
 }
 //in order to include the Java migrations, flywayClasses must be run before flywayMigrate
-val flywayMigrate by project.tasks
-flywayMigrate.dependsOn("flywayClasses")
+tasks.flywayMigrate {
+  dependsOn("flywayClasses")
+  migrationDirs.forEach {
+    inputs.dir(it)
+  }
+  outputs.dir("${project.buildDir}/generated/flyway")
+}
 
 jooqGenerator {
   jooqVersion = "3.13.1"
   configuration("primary", project.sourceSets.getByName("main")) {
-    databaseSources = listOf(
-      "$projectDir/src/flyway/resources/db/migration",
-      "$projectDir/src/flyway/kotlin/db/migration"
-    )
+    databaseSources = migrationDirs
 
     configuration = jooqCodegenConfiguration {
       jdbc {
