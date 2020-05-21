@@ -9,12 +9,12 @@ import mu.KotlinLogging
 import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.Author
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.ImageConversionException
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.MediaNotReadyException
 import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
-import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.infrastructure.image.ImageType
 import org.gotson.komga.infrastructure.security.KomgaPrincipal

@@ -2,9 +2,9 @@ package org.gotson.komga.application.tasks
 
 import mu.KotlinLogging
 import org.gotson.komga.domain.model.Book
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
-import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS_TYPE

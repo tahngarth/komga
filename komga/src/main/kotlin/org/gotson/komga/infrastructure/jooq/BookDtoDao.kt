@@ -1,6 +1,6 @@
 package org.gotson.komga.infrastructure.jooq
 
-import org.gotson.komga.domain.persistence.BookSearch
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.interfaces.rest.dto.AuthorDto
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataDto

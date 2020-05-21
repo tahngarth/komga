@@ -1,8 +1,8 @@
 package org.gotson.komga.infrastructure.jooq
 
 import org.gotson.komga.domain.model.Book
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.persistence.BookRepository
-import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.jooq.Sequences
 import org.gotson.komga.jooq.Tables
 import org.gotson.komga.jooq.tables.records.BookRecord
@@ -35,6 +35,12 @@ class BookDao(
       .fetchInto(b)
       .map { it.toDomain() }
 
+  override fun findAll(): Collection<Book> =
+    dsl.select(*b.fields())
+      .from(b)
+      .fetchInto(b)
+      .map { it.toDomain() }
+
   override fun findAll(bookSearch: BookSearch): Collection<Book> =
     dsl.select(*b.fields())
       .from(b)
@@ -43,12 +49,6 @@ class BookDao(
       .where(bookSearch.toCondition())
       .fetchInto(b)
       .map { it.toDomain() }
-
-//  override fun findByLibraryId(libraryId: Long): List<Book> =
-//    dsl.selectFrom(b)
-//    .where(b.LIBRARY_ID.eq(libraryId))
-//    .fetchInto(b)
-//    .map { it.toDomain() }
 
   override fun insert(book: Book): Book {
     val id = dsl.nextval(Sequences.HIBERNATE_SEQUENCE)

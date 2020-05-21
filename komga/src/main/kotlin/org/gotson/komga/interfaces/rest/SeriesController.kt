@@ -7,9 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import mu.KotlinLogging
 import org.gotson.komga.application.tasks.TaskReceiver
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.SeriesMetadata
-import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.domain.persistence.SeriesMetadataRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal

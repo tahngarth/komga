@@ -1,6 +1,6 @@
 package org.gotson.komga.interfaces.rest.persistence
 
-import org.gotson.komga.domain.persistence.BookSearch
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
