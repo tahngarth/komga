@@ -217,16 +217,18 @@ class SeriesController(
     @Parameter(description = "Metadata fields to update. Set a field to null to unset the metadata. You can omit fields you don't want to update.")
     @Valid @RequestBody newMetadata: SeriesMetadataUpdateDto
   ): SeriesDto =
-    seriesMetadataRepository.findByIdOrNull(seriesId)?.let { metadata ->
-      with(newMetadata) {
-        status?.let { metadata.status = it }
-        statusLock?.let { metadata.statusLock = it }
-        title?.let { metadata.title = it }
-        titleLock?.let { metadata.titleLock = it }
-        titleSort?.let { metadata.titleSort = it }
-        titleSortLock?.let { metadata.titleSortLock = it }
+    seriesMetadataRepository.findByIdOrNull(seriesId)?.let { existing ->
+      val updated = with(newMetadata) {
+        existing.copy(
+          status = status ?: existing.status,
+          statusLock = statusLock ?: existing.statusLock,
+          title = title ?: existing.title,
+          titleLock = titleLock ?: existing.titleLock,
+          titleSort = titleSort ?: existing.titleSort,
+          titleSortLock = titleSortLock ?: existing.titleSortLock
+        )
       }
-      seriesMetadataRepository.update(metadata)
+      seriesMetadataRepository.update(updated)
       seriesDtoRepository.findByIdOrNull(seriesId)!!
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 

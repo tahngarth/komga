@@ -55,8 +55,9 @@ class SeriesMetadataDaoTest(
     val metadata = SeriesMetadata(
       status = SeriesMetadata.Status.ENDED,
       title = "Series",
-      titleSort = "Series, The"
-    ).also { it.seriesId = series.id }
+      titleSort = "Series, The",
+      seriesId = series.id
+    )
 
     Thread.sleep(5)
 
@@ -81,8 +82,9 @@ class SeriesMetadataDaoTest(
     val metadata = SeriesMetadata(
       status = SeriesMetadata.Status.ENDED,
       title = "Series",
-      titleSort = "Series, The"
-    ).also { it.seriesId = series.id }
+      titleSort = "Series, The",
+      seriesId = series.id
+    )
 
     seriesMetadataDao.insert(metadata)
 
@@ -115,30 +117,33 @@ class SeriesMetadataDaoTest(
     val metadata = SeriesMetadata(
       status = SeriesMetadata.Status.ENDED,
       title = "Series",
-      titleSort = "Series, The"
-    ).also { it.seriesId = series.id }
+      titleSort = "Series, The",
+      seriesId = series.id
+    )
     val created = seriesMetadataDao.insert(metadata)
 
     Thread.sleep(5)
 
     val modificationDate = LocalDateTime.now()
 
-    with(created) {
-      status = SeriesMetadata.Status.HIATUS
-      title = "Changed"
-      titleSort = "Changed, The"
-      statusLock = true
-      titleLock = true
-      titleSortLock = true
+    val updated = with(created) {
+      copy(
+        status = SeriesMetadata.Status.HIATUS,
+        title = "Changed",
+        titleSort = "Changed, The",
+        statusLock = true,
+        titleLock = true,
+        titleSortLock = true
+      )
     }
 
-    seriesMetadataDao.update(created)
-    val modified = seriesMetadataDao.findById(created.seriesId)
+    seriesMetadataDao.update(updated)
+    val modified = seriesMetadataDao.findById(updated.seriesId)
 
     Thread.sleep(5)
 
     assertThat(modified.seriesId).isEqualTo(series.id)
-    assertThat(modified.createdDate).isEqualTo(created.createdDate)
+    assertThat(modified.createdDate).isEqualTo(updated.createdDate)
     assertThat(modified.lastModifiedDate)
       .isAfterOrEqualTo(modificationDate)
       .isNotEqualTo(modified.createdDate)

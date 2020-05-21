@@ -1,46 +1,52 @@
 package org.gotson.komga.domain.model
 
-import javax.validation.constraints.NotBlank
+import java.time.LocalDateTime
 
-//TODO: make immutable data class
-class SeriesMetadata : AuditableEntity {
-  constructor(
-    status: Status = Status.ONGOING,
-    title: String,
-    titleSort: String = title
-  ) : super() {
-    this.status = status
-    this.title = title
-    this.titleSort = titleSort
-  }
+class SeriesMetadata(
+  val status: Status = Status.ONGOING,
+  title: String,
+  titleSort: String = title,
 
-  var seriesId: Long = 0
+  val statusLock: Boolean = false,
+  val titleLock: Boolean = false,
+  val titleSortLock: Boolean = false,
 
-  var status: Status
+  val seriesId: Long = 0,
 
-  @NotBlank
-  var title: String
-    set(value) {
-      require(value.isNotBlank()) { "title must not be blank" }
-      field = value.trim()
-    }
+  override val createdDate: LocalDateTime = LocalDateTime.now(),
+  override val lastModifiedDate: LocalDateTime = LocalDateTime.now()
+) : Auditable() {
+  val title = title.trim()
+  val titleSort = titleSort.trim()
 
-  @NotBlank
-  var titleSort: String
-    set(value) {
-      require(value.isNotBlank()) { "titleSort must not be blank" }
-      field = value.trim()
-    }
-
-
-  var statusLock: Boolean = false
-
-  var titleLock: Boolean = false
-
-  var titleSortLock: Boolean = false
-
+  fun copy(
+    status: Status = this.status,
+    title: String = this.title,
+    titleSort: String = this.titleSort,
+    statusLock: Boolean = this.statusLock,
+    titleLock: Boolean = this.titleLock,
+    titleSortLock: Boolean = this.titleSortLock,
+    seriesId: Long = this.seriesId,
+    createdDate: LocalDateTime = this.createdDate,
+    lastModifiedDate: LocalDateTime = this.lastModifiedDate
+  ) =
+    SeriesMetadata(
+      status = status,
+      title = title,
+      titleSort = titleSort,
+      statusLock = statusLock,
+      titleLock = titleLock,
+      titleSortLock = titleSortLock,
+      seriesId = seriesId,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 
   enum class Status {
     ENDED, ONGOING, ABANDONED, HIATUS
   }
+
+  override fun toString(): String =
+    "SeriesMetadata(status=$status, statusLock=$statusLock, titleLock=$titleLock, titleSortLock=$titleSortLock, seriesId=$seriesId, createdDate=$createdDate, lastModifiedDate=$lastModifiedDate, title='$title', titleSort='$titleSort')"
+
 }

@@ -66,13 +66,12 @@ class SeriesMetadataDao(
     SeriesMetadata(
       status = SeriesMetadata.Status.valueOf(status),
       title = title,
-      titleSort = titleSort
-    ).also {
-      it.seriesId = seriesId
-      it.statusLock = statusLock
-      it.titleLock = titleLock
-      it.titleSortLock = titleSortLock
-      it.createdDate = createdDate
-      it.lastModifiedDate = lastModifiedDate
-    }
+      titleSort = titleSort,
+      seriesId = seriesId,
+      statusLock = statusLock,
+      titleLock = titleLock,
+      titleSortLock = titleSortLock,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 }

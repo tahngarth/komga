@@ -16,10 +16,8 @@ class MetadataApplier {
     if (patched != null && !lock) patched
     else original
 
-  fun apply(patch: BookMetadataPatch, metadata: BookMetadata): BookMetadata {
-    logger.debug { "Apply metadata for book: ${metadata.bookId}" }
-
-    return with(metadata) {
+  fun apply(patch: BookMetadataPatch, metadata: BookMetadata): BookMetadata =
+    with(metadata) {
       copy(
         title = getIfNotLocked(title, patch.title, titleLock),
         summary = getIfNotLocked(summary, patch.summary, summaryLock),
@@ -32,34 +30,14 @@ class MetadataApplier {
         authors = getIfNotLocked(authors, patch.authors, authorsLock)
       )
     }
-  }
 
-  fun apply(patch: SeriesMetadataPatch, seriesMetadata: SeriesMetadata) {
-    with(seriesMetadata) {
-      patch.title?.let {
-        if (!titleLock) {
-          logger.debug { "Update title: $it" }
-          title = it
-        } else
-          logger.debug { "title is locked, skipping" }
-      }
-
-      patch.titleSort?.let {
-        if (!titleSortLock) {
-          logger.debug { "Update titleSort: $it" }
-          titleSort = it
-        } else
-          logger.debug { "titleSort is locked, skipping" }
-      }
-
-      patch.status?.let {
-        if (!statusLock) {
-          logger.debug { "status number: $it" }
-          status = it
-        } else
-          logger.debug { "status is locked, skipping" }
-      }
+  fun apply(patch: SeriesMetadataPatch, metadata: SeriesMetadata): SeriesMetadata =
+    with(metadata) {
+      copy(
+        status = getIfNotLocked(status, patch.status, statusLock),
+        title = getIfNotLocked(title, patch.title, titleLock),
+        titleSort = getIfNotLocked(titleSort, patch.titleSort, titleSortLock)
+      )
     }
-  }
 
 }

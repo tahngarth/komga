@@ -90,8 +90,7 @@ class SeriesControllerTest(
     fun `given series with titleSort when requesting via api then series are sorted by titleSort`() {
       val alphaC = seriesLifecycle.createSeries(makeSeries("TheAlpha").also { it.libraryId = library.id })
       seriesMetadataRepository.findById(alphaC.id).let {
-        it.titleSort = "Alpha, The"
-        seriesMetadataRepository.update(it)
+        seriesMetadataRepository.update(it.copy(titleSort = "Alpha, The"))
       }
       seriesLifecycle.createSeries(makeSeries("Beta").also { it.libraryId = library.id })
 

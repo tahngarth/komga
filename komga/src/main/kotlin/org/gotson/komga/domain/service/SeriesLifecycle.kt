@@ -74,7 +74,10 @@ class SeriesLifecycle(
     val createdSeries = seriesRepository.insert(series)
 
     seriesMetadataRepository.insert(
-      SeriesMetadata(title = createdSeries.name).also { it.seriesId = createdSeries.id }
+      SeriesMetadata(
+        title = createdSeries.name,
+        seriesId = createdSeries.id
+      )
     )
 
     return createdSeries
