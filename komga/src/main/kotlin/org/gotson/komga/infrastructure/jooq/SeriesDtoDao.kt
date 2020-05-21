@@ -134,8 +134,8 @@ class SeriesDtoDao(
       libraryId = libraryId,
       name = name,
       url = URL(url).toURI().path,
-      created = createdDate?.toUTC(),
-      lastModified = lastModifiedDate?.toUTC(),
+      created = createdDate.toUTC(),
+      lastModified = lastModifiedDate.toUTC(),
       fileLastModified = fileLastModified.toUTC(),
       booksCount = bookCount,
       metadata = metadata
@@ -145,8 +145,8 @@ class SeriesDtoDao(
     SeriesMetadataDto(
       status = status,
       statusLock = statusLock,
-      created = createdDate?.toUTC(),
-      lastModified = lastModifiedDate?.toUTC(),
+      created = createdDate.toUTC(),
+      lastModified = lastModifiedDate.toUTC(),
       title = title,
       titleLock = titleLock,
       titleSort = titleSort,

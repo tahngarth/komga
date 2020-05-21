@@ -9,9 +9,9 @@ data class SeriesDto(
   val name: String,
   val url: String,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val created: LocalDateTime?,
+  val created: LocalDateTime,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val lastModified: LocalDateTime?,
+  val lastModified: LocalDateTime,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
   val fileLastModified: LocalDateTime,
   val booksCount: Int,
@@ -25,9 +25,9 @@ data class SeriesMetadataDto(
   val status: String,
   val statusLock: Boolean,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val created: LocalDateTime?,
+  val created: LocalDateTime,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val lastModified: LocalDateTime?,
+  val lastModified: LocalDateTime,
   val title: String,
   val titleLock: Boolean,
   val titleSort: String,

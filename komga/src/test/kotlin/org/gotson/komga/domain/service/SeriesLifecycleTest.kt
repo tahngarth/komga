@@ -52,12 +52,12 @@ class SeriesLifecycleTest(
   fun `given series with unordered books when saving then books are ordered with natural sort`() {
     // given
     val books = listOf(
-      makeBook("book 1"),
-      makeBook("book 05"),
-      makeBook("book 6"),
-      makeBook("book 002")
-    ).also { books -> books.forEach { it.libraryId = library.id } }
-    val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let {
+      makeBook("book 1", libraryId = library.id),
+      makeBook("book 05", libraryId = library.id),
+      makeBook("book 6", libraryId = library.id),
+      makeBook("book 002", libraryId = library.id)
+    )
+    val createdSeries = makeSeries(name = "series", libraryId = library.id).let {
       seriesLifecycle.createSeries(it)
     }
     seriesLifecycle.addBooks(createdSeries, books)
@@ -78,12 +78,12 @@ class SeriesLifecycleTest(
   fun `given series when removing a book then remaining books are indexed in sequence`() {
     // given
     val books = listOf(
-      makeBook("book 1"),
-      makeBook("book 2"),
-      makeBook("book 3"),
-      makeBook("book 4")
-    ).also { books -> books.forEach { it.libraryId = library.id } }
-    val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let {
+      makeBook("book 1", libraryId = library.id),
+      makeBook("book 2", libraryId = library.id),
+      makeBook("book 3", libraryId = library.id),
+      makeBook("book 4", libraryId = library.id)
+    )
+    val createdSeries = makeSeries(name = "series", libraryId = library.id).let {
       seriesLifecycle.createSeries(it)
     }
     seriesLifecycle.addBooks(createdSeries, books)
@@ -107,19 +107,19 @@ class SeriesLifecycleTest(
   fun `given series when adding a book then all books are indexed in sequence`() {
     // given
     val books = listOf(
-      makeBook("book 1"),
-      makeBook("book 2"),
-      makeBook("book 4"),
-      makeBook("book 5")
-    ).also { books -> books.forEach { it.libraryId = library.id } }
-    val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let {
+      makeBook("book 1", libraryId = library.id),
+      makeBook("book 2", libraryId = library.id),
+      makeBook("book 4", libraryId = library.id),
+      makeBook("book 5", libraryId = library.id)
+    )
+    val createdSeries = makeSeries(name = "series", libraryId = library.id).let {
       seriesLifecycle.createSeries(it)
     }
     seriesLifecycle.addBooks(createdSeries, books)
     seriesLifecycle.sortBooks(createdSeries)
 
     // when
-    val book = makeBook("book 3").also { it.libraryId = library.id }
+    val book = makeBook("book 3", libraryId = library.id)
     seriesLifecycle.addBooks(createdSeries, listOf(book))
     seriesLifecycle.sortBooks(createdSeries)
 

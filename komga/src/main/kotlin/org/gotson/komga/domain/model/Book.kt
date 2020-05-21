@@ -6,26 +6,21 @@ import java.net.URL
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
-import javax.validation.constraints.NotBlank
 
-class Book(
-  @NotBlank
-  var name: String,
+data class Book(
+  val name: String,
+  val url: URL,
+  val fileLastModified: LocalDateTime,
+  val fileSize: Long = 0,
+  val number: Int = 0,
 
-  var url: URL,
+  val id: Long = 0,
+  val seriesId: Long = 0,
+  val libraryId: Long = 0,
 
-  var fileLastModified: LocalDateTime,
-
-  var fileSize: Long = 0
-) : AuditableEntity() {
-  var id: Long = 0
-
-  var seriesId: Long = 0
-
-  var libraryId: Long = 0
-
-  var number: Int = 0
-
+  override val createdDate: LocalDateTime = LocalDateTime.now(),
+  override val lastModifiedDate: LocalDateTime = LocalDateTime.now()
+) : Auditable() {
 
   fun fileName(): String = FilenameUtils.getName(url.toString())
 
@@ -34,6 +29,4 @@ class Book(
   fun path(): Path = Paths.get(this.url.toURI())
 
   fun fileSizeHumanReadable(): String = BinaryByteUnit.format(fileSize)
-
-  override fun toString(): String = "Book($id, ${url.toURI().path})"
 }

@@ -254,7 +254,7 @@ class OpdsController(
       OpdsFeedAcquisition(
         id = series.id.toString(),
         title = metadata.title,
-        updated = series.lastModifiedDate?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+        updated = series.lastModifiedDate.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
         author = komgaAuthor,
         links = listOf(
           OpdsLinkFeedNavigation(OpdsLinkRel.SELF, "${routeBase}series/$id"),
@@ -293,7 +293,7 @@ class OpdsController(
   private fun SeriesDto.toOpdsEntry(): OpdsEntryNavigation {
     return OpdsEntryNavigation(
       title = metadata.title,
-      updated = lastModified?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+      updated = lastModified.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
       id = id.toString(),
       content = "",
       link = OpdsLinkFeedNavigation(OpdsLinkRel.SUBSECTION, "${routeBase}series/$id")
@@ -305,7 +305,7 @@ class OpdsController(
 
     return OpdsEntryNavigation(
       title = metadata.title,
-      updated = lastModifiedDate?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+      updated = lastModifiedDate.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
       id = id.toString(),
       content = "",
       link = OpdsLinkFeedNavigation(OpdsLinkRel.SUBSECTION, "${routeBase}series/$id")
@@ -323,7 +323,7 @@ class OpdsController(
 
     return OpdsEntryAcquisition(
       title = "${if (prependNumber) "${decimalFormat.format(metadata.numberSort)} - " else ""}${metadata.title}",
-      updated = book.lastModifiedDate?.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
+      updated = book.lastModifiedDate.atZone(ZoneId.systemDefault()) ?: ZonedDateTime.now(),
       id = book.id.toString(),
       content = run {
         var content = "${book.fileExtension().toUpperCase()} - ${book.fileSizeHumanReadable()}"

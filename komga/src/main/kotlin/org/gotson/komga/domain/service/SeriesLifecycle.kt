@@ -34,13 +34,13 @@ class SeriesLifecycle(
 
     val sorted = books.sortedWith(compareBy(natSortComparator) { it.name })
     sorted.forEachIndexed { index, book ->
-      book.number = index + 1
-      bookRepository.update(book)
+      val number = index + 1
+      bookRepository.update(book.copy(number = number))
 
       bookMetadataRepository.findById(book.id).let { metadata ->
         val renumbered = metadata.copy(
-          number = if (!metadata.numberLock) book.number.toString() else metadata.number,
-          numberSort = if (!metadata.numberSortLock) book.number.toFloat() else metadata.numberSort
+          number = if (!metadata.numberLock) number.toString() else metadata.number,
+          numberSort = if (!metadata.numberSortLock) number.toFloat() else metadata.numberSort
         )
         if (!metadata.numberLock || !metadata.numberSortLock)
           bookMetadataRepository.update(renumbered)
@@ -54,8 +54,7 @@ class SeriesLifecycle(
     }
 
     booksToAdd.forEach { book ->
-      book.seriesId = series.id
-      val createdBook = bookRepository.insert(book)
+      val createdBook = bookRepository.insert(book.copy(seriesId = series.id))
 
       // create associated media
       mediaRepository.insert(Media(bookId = createdBook.id))

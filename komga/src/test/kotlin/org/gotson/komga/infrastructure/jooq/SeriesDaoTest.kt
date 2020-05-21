@@ -50,8 +50,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = now
-    ).also { it.libraryId = library.id }
+      fileLastModified = now,
+      libraryId = library.id
+    )
 
     Thread.sleep(5)
 
@@ -70,8 +71,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
 
     val created = seriesDao.insert(series)
     assertThat(seriesDao.count()).isEqualTo(1)
@@ -87,14 +89,16 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = now
-    ).also { it.libraryId = library.id }
+      fileLastModified = now,
+      libraryId = library.id
+    )
 
     val series2 = Series(
       name = "Series2",
       url = URL("file://series2"),
-      fileLastModified = now
-    ).also { it.libraryId = library.id }
+      fileLastModified = now,
+      libraryId = library.id
+    )
 
     seriesDao.insert(series)
     seriesDao.insert(series2)
@@ -111,14 +115,16 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = now
-    ).also { it.libraryId = library.id }
+      fileLastModified = now,
+      libraryId = library.id
+    )
 
     val series2 = Series(
       name = "Series2",
       url = URL("file://series2"),
-      fileLastModified = now
-    ).also { it.libraryId = library.id }
+      fileLastModified = now,
+      libraryId = library.id
+    )
 
     seriesDao.insert(series)
     seriesDao.insert(series2)
@@ -134,8 +140,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
 
     val created = seriesDao.insert(series)
 
@@ -157,8 +164,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
     seriesDao.insert(series)
 
     val found = seriesDao.findByLibraryId(library.id)
@@ -172,8 +180,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
     seriesDao.insert(series)
 
     val found = seriesDao.findByLibraryId(library.id + 1)
@@ -186,8 +195,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
     seriesDao.insert(series)
 
     val found = seriesDao.findByLibraryIdAndUrlNotIn(library.id, listOf(URL("file://series2")))
@@ -204,8 +214,9 @@ class SeriesDaoTest(
     val series = Series(
       name = "Series",
       url = URL("file://series"),
-      fileLastModified = LocalDateTime.now()
-    ).also { it.libraryId = library.id }
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
     seriesDao.insert(series)
 
     val found = seriesDao.findByLibraryIdAndUrl(library.id, URL("file://series"))

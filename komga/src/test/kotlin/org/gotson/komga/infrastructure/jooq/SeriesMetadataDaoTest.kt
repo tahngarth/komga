@@ -48,7 +48,7 @@ class SeriesMetadataDaoTest(
   @Test
   fun `given a seriesMetadata when inserting then it is persisted`() {
     val series = seriesRepository.insert(
-      makeSeries("Series").also { it.libraryId = library.id }
+      makeSeries("Series", libraryId = library.id)
     )
 
     val now = LocalDateTime.now()
@@ -77,7 +77,7 @@ class SeriesMetadataDaoTest(
   @Test
   fun `given existing seriesMetadata when finding by id then metadata is returned`() {
     val series = seriesRepository.insert(
-      makeSeries("Series").also { it.libraryId = library.id }
+      makeSeries("Series", libraryId = library.id)
     )
     val metadata = SeriesMetadata(
       status = SeriesMetadata.Status.ENDED,
@@ -111,7 +111,7 @@ class SeriesMetadataDaoTest(
   @Test
   fun `given a seriesMetadata when updating then it is persisted`() {
     val series = seriesRepository.insert(
-      makeSeries("Series").also { it.libraryId = library.id }
+      makeSeries("Series", libraryId = library.id)
     )
 
     val metadata = SeriesMetadata(

@@ -126,13 +126,12 @@ class BookDao(
       name = name,
       url = URL(url),
       fileLastModified = fileLastModified,
-      fileSize = fileSize
-    ).also {
-      it.id = id
-      it.libraryId = libraryId
-      it.seriesId = seriesId
-      it.createdDate = createdDate
-      it.lastModifiedDate = lastModifiedDate
-      it.number = number
-    }
+      fileSize = fileSize,
+      id = id,
+      libraryId = libraryId,
+      seriesId = seriesId,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate,
+      number = number
+    )
 }

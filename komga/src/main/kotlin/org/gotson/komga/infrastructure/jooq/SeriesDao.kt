@@ -110,11 +110,10 @@ class SeriesDao(
     Series(
       name = name,
       url = URL(url),
-      fileLastModified = fileLastModified
-    ).also {
-      it.id = id
-      it.libraryId = libraryId
-      it.createdDate = createdDate
-      it.lastModifiedDate = lastModifiedDate
-    }
+      fileLastModified = fileLastModified,
+      id = id,
+      libraryId = libraryId,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 }

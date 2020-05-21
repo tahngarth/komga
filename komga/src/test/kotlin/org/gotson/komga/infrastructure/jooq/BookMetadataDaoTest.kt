@@ -39,12 +39,9 @@ class BookMetadataDaoTest(
   fun setup() {
     library = libraryRepository.insert(library)
 
-    series.libraryId = library.id
-    series = seriesRepository.insert(series)
+    series = seriesRepository.insert(series.copy(libraryId = library.id))
 
-    book.libraryId = library.id
-    book.seriesId = series.id
-    book = bookRepository.insert(book)
+    book = bookRepository.insert(book.copy(libraryId = library.id, seriesId = series.id))
   }
 
   @AfterEach

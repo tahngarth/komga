@@ -24,9 +24,11 @@ class LibraryScanner(
 
   fun scanRootFolder(library: Library) {
     logger.info { "Updating library: $library" }
-    val scannedSeries = fileSystemScanner.scanRootFolder(Paths.get(library.root.toURI()))
-    scannedSeries.keys.forEach { it.libraryId = library.id }
-    scannedSeries.values.forEach { books -> books.forEach { it.libraryId = library.id } }
+    val scannedSeries =
+      fileSystemScanner.scanRootFolder(Paths.get(library.root.toURI()))
+        .map { (series, books) ->
+          series.copy(libraryId = library.id) to books.map { it.copy(libraryId = library.id) }
+        }.toMap()
 
     // delete series that don't exist anymore
     if (scannedSeries.isEmpty()) {
@@ -68,12 +70,14 @@ class LibraryScanner(
             existingBooks.find { it.url == newBook.url }?.let { existingBook ->
               if (newBook.fileLastModified.truncatedTo(ChronoUnit.MILLIS) != existingBook.fileLastModified.truncatedTo(ChronoUnit.MILLIS)) {
                 logger.info { "Book changed on disk, update and reset media status: $existingBook" }
-                existingBook.fileLastModified = newBook.fileLastModified
-                existingBook.fileSize = newBook.fileSize
+                val updatedBook = existingBook.copy(
+                  fileLastModified = newBook.fileLastModified,
+                  fileSize = newBook.fileSize
+                )
                 mediaRepository.findById(existingBook.id).let {
                   mediaRepository.update(it.reset())
                 }
-                bookRepository.update(existingBook)
+                bookRepository.update(updatedBook)
               }
             }
           }

@@ -88,11 +88,11 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given series with titleSort when requesting via api then series are sorted by titleSort`() {
-      val alphaC = seriesLifecycle.createSeries(makeSeries("TheAlpha").also { it.libraryId = library.id })
+      val alphaC = seriesLifecycle.createSeries(makeSeries("TheAlpha", libraryId = library.id))
       seriesMetadataRepository.findById(alphaC.id).let {
         seriesMetadataRepository.update(it.copy(titleSort = "Alpha, The"))
       }
-      seriesLifecycle.createSeries(makeSeries("Beta").also { it.libraryId = library.id })
+      seriesLifecycle.createSeries(makeSeries("Beta", libraryId = library.id))
 
       mockMvc.get("/api/v1/series")
         .andExpect {
@@ -106,7 +106,7 @@ class SeriesControllerTest(
     @WithMockCustomUser
     fun `given series when requesting via api then series are sorted insensitive of case`() {
       listOf("a", "b", "B", "C")
-        .map { name -> makeSeries(name).also { it.libraryId = library.id } }
+        .map { name -> makeSeries(name, libraryId = library.id) }
         .forEach {
           seriesLifecycle.createSeries(it)
         }
@@ -129,14 +129,14 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given books with unordered index when requesting via api then books are ordered`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1"), makeBook("3")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id), makeBook("3", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
 
-      val addedBook = makeBook("2").also { it.libraryId = library.id }
+      val addedBook = makeBook("2", libraryId = library.id)
       seriesLifecycle.addBooks(createdSeries, listOf(addedBook))
       seriesLifecycle.sortBooks(createdSeries)
 
@@ -152,14 +152,14 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given many books with unordered index when requesting via api then books are ordered and paged`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = (1..100 step 2).map { makeBook("$it") }.also { list -> list.forEach { it.libraryId = library.id } }
+          val books = (1..100 step 2).map { makeBook("$it", libraryId = library.id) }
           seriesLifecycle.addBooks(created, books)
         }
       }
 
-      val addedBook = makeBook("2").also { it.libraryId = library.id }
+      val addedBook = makeBook("2", libraryId = library.id)
       seriesLifecycle.addBooks(createdSeries, listOf(addedBook))
       seriesLifecycle.sortBooks(createdSeries)
 
@@ -182,17 +182,17 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [1])
     fun `given user with access to a single library when getting series then only gets series from this library`() {
-      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
 
       val otherLibrary = libraryRepository.insert(makeLibrary("other"))
-      makeSeries(name = "otherSeries").also { it.libraryId = otherLibrary.id }.let { series ->
+      makeSeries(name = "otherSeries", libraryId = otherLibrary.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("2")).also { list -> list.forEach { it.libraryId = otherLibrary.id } }
+          val books = listOf(makeBook("2", libraryId = otherLibrary.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -211,9 +211,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific series then returns unauthorized`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -225,9 +225,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific series thumbnail then returns unauthorized`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -239,9 +239,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific series books then returns unauthorized`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -256,9 +256,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given book without thumbnail when getting series thumbnail then returns not found`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -273,9 +273,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given regular user when getting series then url is hidden`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -304,9 +304,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(roles = ["ADMIN"])
     fun `given admin user when getting series then url is available`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -365,9 +365,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser(roles = ["ADMIN"])
     fun `given valid json when updating metadata then fields are updated`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -407,9 +407,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given request with cache headers when getting series thumbnail then returns 304 not modified`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }
@@ -437,9 +437,9 @@ class SeriesControllerTest(
     @Test
     @WithMockCustomUser
     fun `given request with cache headers and modified first book when getting series thumbnail then returns 200 ok`() {
-      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      val createdSeries = makeSeries(name = "series", libraryId = library.id).let { series ->
         seriesLifecycle.createSeries(series).also { created ->
-          val books = listOf(makeBook("1"), makeBook("2")).also { list -> list.forEach { it.libraryId = library.id } }
+          val books = listOf(makeBook("1", libraryId = library.id), makeBook("2", libraryId = library.id))
           seriesLifecycle.addBooks(created, books)
         }
       }

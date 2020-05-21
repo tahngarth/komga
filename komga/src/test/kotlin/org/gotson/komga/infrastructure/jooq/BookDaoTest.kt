@@ -33,8 +33,7 @@ class BookDaoTest(
   @BeforeAll
   fun setup() {
     library = libraryRepository.insert(library)
-    series.libraryId = library.id
-    series = seriesRepository.insert(series)
+    series = seriesRepository.insert(series.copy(libraryId = library.id))
   }
 
   @AfterEach
@@ -57,11 +56,10 @@ class BookDaoTest(
       name = "Book",
       url = URL("file://book"),
       fileLastModified = now,
-      fileSize = 3
-    ).also {
-      it.seriesId = series.id
-      it.libraryId = library.id
-    }
+      fileSize = 3,
+      seriesId = series.id,
+      libraryId = library.id
+    )
 
     Thread.sleep(5)
 
@@ -82,32 +80,33 @@ class BookDaoTest(
       name = "Book",
       url = URL("file://book"),
       fileLastModified = LocalDateTime.now(),
-      fileSize = 3
-    ).also {
-      it.seriesId = series.id
-      it.libraryId = library.id
-    }
+      fileSize = 3,
+      seriesId = series.id,
+      libraryId = library.id
+    )
     val created = bookDao.insert(book)
 
     Thread.sleep(5)
 
     val modificationDate = LocalDateTime.now()
 
-    with(created) {
-      name = "Updated"
-      url = URL("file://updated")
-      fileLastModified = modificationDate
-      fileSize = 5
+    val updated = with(created) {
+      copy(
+        name = "Updated",
+        url = URL("file://updated"),
+        fileLastModified = modificationDate,
+        fileSize = 5
+      )
     }
 
-    bookDao.update(created)
-    val modified = bookDao.findByIdOrNull(created.id)!!
+    bookDao.update(updated)
+    val modified = bookDao.findByIdOrNull(updated.id)!!
 
-    assertThat(modified.id).isEqualTo(created.id)
-    assertThat(modified.createdDate).isEqualTo(created.createdDate)
+    assertThat(modified.id).isEqualTo(updated.id)
+    assertThat(modified.createdDate).isEqualTo(updated.createdDate)
     assertThat(modified.lastModifiedDate)
       .isAfterOrEqualTo(modificationDate)
-      .isNotEqualTo(created.lastModifiedDate)
+      .isNotEqualTo(updated.lastModifiedDate)
     assertThat(modified.name).isEqualTo("Updated")
     assertThat(modified.url).isEqualTo(URL("file://updated"))
     assertThat(modified.fileLastModified).isEqualTo(modificationDate)
@@ -120,11 +119,10 @@ class BookDaoTest(
       name = "Book",
       url = URL("file://book"),
       fileLastModified = LocalDateTime.now(),
-      fileSize = 3
-    ).also {
-      it.seriesId = series.id
-      it.libraryId = library.id
-    }
+      fileSize = 3,
+      seriesId = series.id,
+      libraryId = library.id
+    )
     val created = bookDao.insert(book)
 
     val found = bookDao.findByIdOrNull(created.id)

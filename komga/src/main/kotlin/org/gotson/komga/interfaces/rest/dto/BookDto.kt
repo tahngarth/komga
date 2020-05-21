@@ -14,9 +14,9 @@ data class BookDto(
   val url: String,
   val number: Int,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val created: LocalDateTime?,
+  val created: LocalDateTime,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
-  val lastModified: LocalDateTime?,
+  val lastModified: LocalDateTime,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
   val fileLastModified: LocalDateTime,
   val sizeBytes: Long,

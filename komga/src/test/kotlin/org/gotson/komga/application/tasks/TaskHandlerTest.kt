@@ -72,8 +72,8 @@ class TaskHandlerTest(
 
   @Test
   fun `when similar tasks are submitted then only a few are executed`() {
-    val book = makeBook("book").also { it.libraryId = library.id }
-    val series = makeSeries("series").also { it.libraryId = library.id }
+    val book = makeBook("book", libraryId = library.id)
+    val series = makeSeries("series", libraryId = library.id)
     seriesLifecycle.createSeries(series).let {
       seriesLifecycle.addBooks(it, listOf(book))
     }
