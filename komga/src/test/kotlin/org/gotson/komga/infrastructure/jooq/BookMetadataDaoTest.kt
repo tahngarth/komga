@@ -73,19 +73,18 @@ class BookMetadataDaoTest(
       publisher = "publisher",
       ageRating = 18,
       releaseDate = LocalDate.now(),
-      authors = mutableListOf(Author("author", "role"))
-    ).also {
-      it.bookId = book.id
-      it.titleLock = true
-      it.summaryLock = true
-      it.numberLock = true
-      it.numberSortLock = true
-      it.readingDirectionLock = true
-      it.publisherLock = true
-      it.ageRatingLock = true
-      it.releaseDateLock = true
-      it.authorsLock = true
-    }
+      authors = mutableListOf(Author("author", "role")),
+      bookId = book.id,
+      titleLock = true,
+      summaryLock = true,
+      numberLock = true,
+      numberSortLock = true,
+      readingDirectionLock = true,
+      publisherLock = true,
+      ageRatingLock = true,
+      releaseDateLock = true,
+      authorsLock = true
+    )
 
     Thread.sleep(5)
 
@@ -125,10 +124,9 @@ class BookMetadataDaoTest(
     val metadata = BookMetadata(
       title = "Book",
       number = "1",
-      numberSort = 1F
-    ).also {
-      it.bookId = book.id
-    }
+      numberSort = 1F,
+      bookId = book.id
+    )
 
     val created = bookMetadataDao.insert(metadata)
 
@@ -166,68 +164,67 @@ class BookMetadataDaoTest(
       publisher = "publisher",
       ageRating = 18,
       releaseDate = LocalDate.now(),
-      authors = mutableListOf(Author("author", "role"))
-    ).also {
-      it.bookId = book.id
-    }
+      authors = mutableListOf(Author("author", "role")),
+      bookId = book.id
+    )
     val created = bookMetadataDao.insert(metadata)
 
     Thread.sleep(5)
 
     val modificationDate = LocalDateTime.now()
 
-    with(created) {
-      title = "BookUpdated"
-      summary = "SummaryUpdated"
-      number = "2"
-      numberSort = 2F
-      readingDirection = BookMetadata.ReadingDirection.RIGHT_TO_LEFT
-      publisher = "publisher2"
-      ageRating = 15
-      releaseDate = LocalDate.now()
-      authors = mutableListOf(Author("author2", "role2"))
-    }
-    created.let {
-      it.titleLock = true
-      it.summaryLock = true
-      it.numberLock = true
-      it.numberSortLock = true
-      it.readingDirectionLock = true
-      it.publisherLock = true
-      it.ageRatingLock = true
-      it.releaseDateLock = true
-      it.authorsLock = true
+    val updated = with(created) {
+      copy(
+        title = "BookUpdated",
+        summary = "SummaryUpdated",
+        number = "2",
+        numberSort = 2F,
+        readingDirection = BookMetadata.ReadingDirection.RIGHT_TO_LEFT,
+        publisher = "publisher2",
+        ageRating = 15,
+        releaseDate = LocalDate.now(),
+        authors = mutableListOf(Author("author2", "role2")),
+        titleLock = true,
+        summaryLock = true,
+        numberLock = true,
+        numberSortLock = true,
+        readingDirectionLock = true,
+        publisherLock = true,
+        ageRatingLock = true,
+        releaseDateLock = true,
+        authorsLock = true
+      )
     }
 
-    bookMetadataDao.update(created)
-    val modified = bookMetadataDao.findById(created.bookId)
+    bookMetadataDao.update(updated)
+    val modified = bookMetadataDao.findById(updated.bookId)
 
-    assertThat(modified.bookId).isEqualTo(created.bookId)
-    assertThat(modified.createdDate).isEqualTo(created.createdDate)
+    assertThat(modified.bookId).isEqualTo(updated.bookId)
+    assertThat(modified.createdDate).isEqualTo(updated.createdDate)
     assertThat(modified.lastModifiedDate)
       .isAfter(modificationDate)
-      .isNotEqualTo(created.lastModifiedDate)
+      .isNotEqualTo(updated.lastModifiedDate)
 
-    assertThat(modified.title).isEqualTo(created.title)
-    assertThat(modified.summary).isEqualTo(created.summary)
-    assertThat(modified.number).isEqualTo(created.number)
-    assertThat(modified.numberSort).isEqualTo(created.numberSort)
-    assertThat(modified.readingDirection).isEqualTo(created.readingDirection)
-    assertThat(modified.publisher).isEqualTo(created.publisher)
-    assertThat(modified.ageRating).isEqualTo(created.ageRating)
+    assertThat(modified.title).isEqualTo(updated.title)
+    assertThat(modified.summary).isEqualTo(updated.summary)
+    assertThat(modified.number).isEqualTo(updated.number)
+    assertThat(modified.numberSort).isEqualTo(updated.numberSort)
+    assertThat(modified.readingDirection).isEqualTo(updated.readingDirection)
+    assertThat(modified.publisher).isEqualTo(updated.publisher)
+    assertThat(modified.ageRating).isEqualTo(updated.ageRating)
 
-    assertThat(modified.titleLock).isEqualTo(created.titleLock)
-    assertThat(modified.summaryLock).isEqualTo(created.summaryLock)
-    assertThat(modified.numberLock).isEqualTo(created.numberLock)
-    assertThat(modified.numberSortLock).isEqualTo(created.numberSortLock)
-    assertThat(modified.readingDirectionLock).isEqualTo(created.readingDirectionLock)
-    assertThat(modified.publisherLock).isEqualTo(created.publisherLock)
-    assertThat(modified.ageRatingLock).isEqualTo(created.ageRatingLock)
-    assertThat(modified.releaseDateLock).isEqualTo(created.releaseDateLock)
-    assertThat(modified.authorsLock).isEqualTo(created.authorsLock)
+    assertThat(modified.titleLock).isEqualTo(updated.titleLock)
+    assertThat(modified.summaryLock).isEqualTo(updated.summaryLock)
+    assertThat(modified.numberLock).isEqualTo(updated.numberLock)
+    assertThat(modified.numberSortLock).isEqualTo(updated.numberSortLock)
+    assertThat(modified.readingDirectionLock).isEqualTo(updated.readingDirectionLock)
+    assertThat(modified.publisherLock).isEqualTo(updated.publisherLock)
+    assertThat(modified.ageRatingLock).isEqualTo(updated.ageRatingLock)
+    assertThat(modified.releaseDateLock).isEqualTo(updated.releaseDateLock)
+    assertThat(modified.authorsLock).isEqualTo(updated.authorsLock)
 
-    assertThat(modified.authors.first().name).isEqualTo(created.authors.first().name)
-    assertThat(modified.authors.first().role).isEqualTo(created.authors.first().role)
+    assertThat(modified.authors.first().name).isEqualTo(updated.authors.first().name)
+    assertThat(modified.authors.first().role).isEqualTo(updated.authors.first().role)
   }
 
   @Test
@@ -241,10 +238,9 @@ class BookMetadataDaoTest(
       publisher = "publisher",
       ageRating = 18,
       releaseDate = LocalDate.now(),
-      authors = mutableListOf(Author("author", "role"))
-    ).also {
-      it.bookId = book.id
-    }
+      authors = mutableListOf(Author("author", "role")),
+      bookId = book.id
+    )
     val created = bookMetadataDao.insert(metadata)
 
     val found = catchThrowable { bookMetadataDao.findById(created.bookId) }

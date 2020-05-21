@@ -460,8 +460,7 @@ class SeriesControllerTest(
 
       bookRepository.findAll().first { it.name == "1" }.let { book ->
         bookMetadataRepository.findById(book.id).let {
-          it.numberSort = 3F
-          bookMetadataRepository.update(it)
+          bookMetadataRepository.update(it.copy(numberSort = 3F))
         }
       }
 

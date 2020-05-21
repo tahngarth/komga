@@ -8,3 +8,7 @@ spring:
   artemis:
     embedded:
       persistent: false
+
+logging:
+  level:
+    org.jooq: DEBUG

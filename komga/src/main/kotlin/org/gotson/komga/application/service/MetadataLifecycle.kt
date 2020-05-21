@@ -26,8 +26,10 @@ class MetadataLifecycle(
     bookMetadataProviders.forEach { provider ->
       provider.getBookMetadataFromBook(book, media)?.let { bPatch ->
         bookMetadataRepository.findById(book.id).let {
-          metadataApplier.apply(bPatch, it)
-          bookMetadataRepository.update(it)
+          logger.debug { "Original metadata: $it" }
+          val patched = metadataApplier.apply(bPatch, it)
+          logger.debug { "Patched metadata: $patched" }
+          bookMetadataRepository.update(patched)
         }
 
         bPatch.series?.let { sPatch ->

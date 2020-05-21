@@ -591,12 +591,14 @@ class BookControllerTest(
 
       val bookId = bookRepository.findAll().first().id
       bookMetadataRepository.findById(bookId).let {
-        it.ageRating = 12
-        it.readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
-        it.authors.add(Author("Author", "role"))
-        it.releaseDate = testDate
+        val updated = it.copy(
+          ageRating = 12,
+          readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT,
+          authors = it.authors.toMutableList().also { it.add(Author("Author", "role")) },
+          releaseDate = testDate
+        )
 
-        bookMetadataRepository.update(it)
+        bookMetadataRepository.update(updated)
       }
 
       val metadata = bookMetadataRepository.findById(bookId)
@@ -646,19 +648,21 @@ class BookControllerTest(
 
       val bookId = bookRepository.findAll().first().id
       bookMetadataRepository.findById(bookId).let {
-        it.ageRating = 12
-        it.readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
-        it.authors.add(Author("Author", "role"))
-        it.releaseDate = testDate
-        it.summary = "summary"
-        it.number = "number"
-        it.numberLock = true
-        it.numberSort = 2F
-        it.numberSortLock = true
-        it.publisher = "publisher"
-        it.title = "title"
+        val updated = it.copy(
+          ageRating = 12,
+          readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT,
+          authors = it.authors.toMutableList().also { it.add(Author("Author", "role")) },
+          releaseDate = testDate,
+          summary = "summary",
+          number = "number",
+          numberLock = true,
+          numberSort = 2F,
+          numberSortLock = true,
+          publisher = "publisher",
+          title = "title"
+        )
 
-        bookMetadataRepository.update(it)
+        bookMetadataRepository.update(updated)
       }
 
       val jsonString = """

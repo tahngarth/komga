@@ -38,16 +38,12 @@ class SeriesLifecycle(
       bookRepository.update(book)
 
       bookMetadataRepository.findById(book.id).let { metadata ->
-        var changed = false
-        if (!metadata.numberLock) {
-          metadata.number = book.number.toString()
-          changed = true
-        }
-        if (!metadata.numberSortLock) {
-          metadata.numberSort = book.number.toFloat()
-          changed = true
-        }
-        if (changed) bookMetadataRepository.update(metadata)
+        val renumbered = metadata.copy(
+          number = if (!metadata.numberLock) book.number.toString() else metadata.number,
+          numberSort = if (!metadata.numberSortLock) book.number.toFloat() else metadata.numberSort
+        )
+        if (!metadata.numberLock || !metadata.numberSortLock)
+          bookMetadataRepository.update(renumbered)
       }
     }
   }
@@ -68,8 +64,9 @@ class SeriesLifecycle(
       bookMetadataRepository.insert(BookMetadata(
         title = createdBook.name,
         number = createdBook.number.toString(),
-        numberSort = createdBook.number.toFloat()
-      ).also { it.bookId = createdBook.id })
+        numberSort = createdBook.number.toFloat(),
+        bookId = createdBook.id
+      ))
     }
   }
 

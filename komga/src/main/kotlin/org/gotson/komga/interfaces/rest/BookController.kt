@@ -338,36 +338,32 @@ class BookController(
     @Parameter(description = "Metadata fields to update. Set a field to null to unset the metadata. You can omit fields you don't want to update.")
     @Valid @RequestBody newMetadata: BookMetadataUpdateDto
   ): BookDto =
-    bookMetadataRepository.findByIdOrNull(bookId)?.let { metadata ->
-      with(newMetadata) {
-        title?.let { metadata.title = it }
-        titleLock?.let { metadata.titleLock = it }
-        summary?.let { metadata.summary = it }
-        summaryLock?.let { metadata.summaryLock = it }
-        number?.let { metadata.number = it }
-        numberLock?.let { metadata.numberLock = it }
-        numberSort?.let { metadata.numberSort = it }
-        numberSortLock?.let { metadata.numberSortLock = it }
-        if (isSet("readingDirection")) metadata.readingDirection = newMetadata.readingDirection
-        readingDirectionLock?.let { metadata.readingDirectionLock = it }
-        publisher?.let { metadata.publisher = it }
-        publisherLock?.let { metadata.publisherLock = it }
-        if (isSet("ageRating")) metadata.ageRating = newMetadata.ageRating
-        ageRatingLock?.let { metadata.ageRatingLock = it }
-        if (isSet("releaseDate")) {
-          metadata.releaseDate = newMetadata.releaseDate
-        }
-        releaseDateLock?.let { metadata.releaseDateLock = it }
-        if (isSet("authors")) {
-          if (authors != null) {
-            metadata.authors = authors!!.map {
-              Author(it.name ?: "", it.role ?: "")
-            }.toMutableList()
-          } else metadata.authors = mutableListOf()
-        }
-        authorsLock?.let { metadata.authorsLock = it }
+    bookMetadataRepository.findByIdOrNull(bookId)?.let { existing ->
+      val updated = with(newMetadata) {
+        existing.copy(
+          title = title ?: existing.title,
+          titleLock = titleLock ?: existing.titleLock,
+          summary = summary ?: existing.summary,
+          summaryLock = summaryLock ?: existing.summaryLock,
+          number = number ?: existing.number,
+          numberLock = numberLock ?: existing.numberLock,
+          numberSort = numberSort ?: existing.numberSort,
+          numberSortLock = numberSortLock ?: existing.numberSortLock,
+          readingDirection = if (isSet("readingDirection")) readingDirection else existing.readingDirection,
+          readingDirectionLock = readingDirectionLock ?: existing.readingDirectionLock,
+          publisher = publisher ?: existing.publisher,
+          publisherLock = publisherLock ?: existing.publisherLock,
+          ageRating = if (isSet("ageRating")) ageRating else existing.ageRating,
+          ageRatingLock = ageRatingLock ?: existing.ageRatingLock,
+          releaseDate = if (isSet("releaseDate")) releaseDate else existing.releaseDate,
+          releaseDateLock = releaseDateLock ?: existing.releaseDateLock,
+          authors = if (isSet("authors")) {
+            if (authors != null) authors!!.map { Author(it.name ?: "", it.role ?: "") } else emptyList()
+          } else existing.authors,
+          authorsLock = authorsLock ?: existing.authorsLock
+        )
       }
-      bookMetadataRepository.update(metadata)
+      bookMetadataRepository.update(updated)
       bookDtoRepository.findByIdOrNull(bookId)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 

@@ -145,21 +145,23 @@ class BookMetadataDao(
       publisher = publisher,
       ageRating = ageRating,
       releaseDate = releaseDate,
-      authors = authors.toMutableList()
-    ).also {
-      it.bookId = bookId
-      it.createdDate = createdDate
-      it.lastModifiedDate = lastModifiedDate
-      it.titleLock = titleLock
-      it.summaryLock = summaryLock
-      it.numberLock = numberLock
-      it.numberSortLock = numberSortLock
-      it.readingDirectionLock = readingDirectionLock
-      it.publisherLock = publisherLock
-      it.ageRatingLock = ageRatingLock
-      it.releaseDateLock = releaseDateLock
-      it.authorsLock = authorsLock
-    }
+      authors = authors.toMutableList(),
+
+      bookId = bookId,
+
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate,
+
+      titleLock = titleLock,
+      summaryLock = summaryLock,
+      numberLock = numberLock,
+      numberSortLock = numberSortLock,
+      readingDirectionLock = readingDirectionLock,
+      publisherLock = publisherLock,
+      ageRatingLock = ageRatingLock,
+      releaseDateLock = releaseDateLock,
+      authorsLock = authorsLock
+    )
 
   private fun BookMetadataAuthorRecord.toDomain() =
     Author(
