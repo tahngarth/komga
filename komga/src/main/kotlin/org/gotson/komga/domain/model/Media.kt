@@ -1,54 +1,48 @@
 package org.gotson.komga.domain.model
 
+import java.time.LocalDateTime
+
 class Media(
-  var status: Status = Status.UNKNOWN,
+  val status: Status = Status.UNKNOWN,
+  val mediaType: String? = null,
+  val thumbnail: ByteArray? = null,
+  val pages: List<BookPage> = emptyList(),
+  val files: List<String> = emptyList(),
+  val comment: String? = null,
+  val bookId: Long = 0,
+  override val createdDate: LocalDateTime = LocalDateTime.now(),
+  override val lastModifiedDate: LocalDateTime = LocalDateTime.now()
+) : Auditable() {
 
-  var mediaType: String? = null,
+  fun reset() = Media(bookId = this.bookId)
 
-  var thumbnail: ByteArray? = null,
-
-  pages: Iterable<BookPage> = emptyList(),
-
-  files: Iterable<String> = emptyList(),
-
-  var comment: String? = null
-) : AuditableEntity() {
-  var bookId: Long = 0
-
-  private var _pages: MutableList<BookPage> = mutableListOf()
-
-  var pages: List<BookPage>
-    get() = _pages.toList()
-    set(value) {
-      _pages.clear()
-      _pages.addAll(value)
-    }
-
-  private var _files: MutableList<String> = mutableListOf()
-
-  var files: List<String>
-    get() = _files.toList()
-    set(value) {
-      _files.clear()
-      _files.addAll(value)
-    }
-
-  fun reset() {
-    status = Status.UNKNOWN
-    mediaType = null
-    thumbnail = null
-    comment = null
-    _pages.clear()
-    _files.clear()
-  }
-
-  init {
-    this.pages = pages.toList()
-    this.files = files.toList()
-  }
+  fun copy(
+    status: Status = this.status,
+    mediaType: String? = this.mediaType,
+    thumbnail: ByteArray? = this.thumbnail,
+    pages: List<BookPage> = this.pages.toList(),
+    files: List<String> = this.files.toList(),
+    comment: String? = this.comment,
+    bookId: Long = this.bookId,
+    createdDate: LocalDateTime = this.createdDate,
+    lastModifiedDate: LocalDateTime = this.lastModifiedDate
+  ) =
+    Media(
+      status = status,
+      mediaType = mediaType,
+      thumbnail = thumbnail,
+      pages = pages,
+      files = files,
+      comment = comment,
+      bookId = bookId,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 
   enum class Status {
     UNKNOWN, ERROR, READY, UNSUPPORTED
   }
 
+  override fun toString(): String =
+    "Media(status=$status, mediaType=$mediaType, pages=$pages, files=$files, comment=$comment, bookId=$bookId, createdDate=$createdDate, lastModifiedDate=$lastModifiedDate)"
 }

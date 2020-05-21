@@ -58,7 +58,7 @@ class SeriesLifecycle(
       val createdBook = bookRepository.insert(book)
 
       // create associated media
-      mediaRepository.insert(Media().also { it.bookId = createdBook.id })
+      mediaRepository.insert(Media(bookId = createdBook.id))
 
       // create associated metadata
       bookMetadataRepository.insert(BookMetadata(

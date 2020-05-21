@@ -71,8 +71,7 @@ class LibraryScanner(
                 existingBook.fileLastModified = newBook.fileLastModified
                 existingBook.fileSize = newBook.fileSize
                 mediaRepository.findById(existingBook.id).let {
-                  it.reset()
-                  mediaRepository.update(it)
+                  mediaRepository.update(it.reset())
                 }
                 bookRepository.update(existingBook)
               }

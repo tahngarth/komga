@@ -32,7 +32,7 @@ class BookLifecycle(
     } catch (ex: Exception) {
       logger.error(ex) { "Error while analyzing book: $book" }
       Media(status = Media.Status.ERROR, comment = ex.message)
-    }.also { it.bookId = book.id }
+    }.copy(bookId = book.id)
     mediaRepository.update(media)
   }
 
@@ -43,7 +43,7 @@ class BookLifecycle(
     } catch (ex: Exception) {
       logger.error(ex) { "Error while recreating thumbnail" }
       Media(status = Media.Status.ERROR)
-    }.also { it.bookId = book.id }
+    }.copy(bookId = book.id)
     mediaRepository.update(media)
   }
 

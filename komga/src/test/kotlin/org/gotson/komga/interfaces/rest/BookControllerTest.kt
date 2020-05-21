@@ -246,8 +246,7 @@ class BookControllerTest(
 
       val book = bookRepository.findAll().first()
       mediaRepository.findById(book.id).let {
-        it.status = status
-        mediaRepository.update(it)
+        mediaRepository.update(it.copy(status = status))
       }
 
       mockMvc.get("/api/v1/books/${book.id}/pages")
@@ -267,8 +266,7 @@ class BookControllerTest(
 
       val book = bookRepository.findAll().first()
       mediaRepository.findById(book.id).let {
-        it.status = status
-        mediaRepository.update(it)
+        mediaRepository.update(it.copy(status = status))
       }
 
       mockMvc.get("/api/v1/books/${book.id}/pages/1")
@@ -289,10 +287,10 @@ class BookControllerTest(
 
     val book = bookRepository.findAll().first()
     mediaRepository.findById(book.id).let {
-      it.status = Media.Status.READY
-      it.pages = listOf(BookPage("file", "image/jpeg"))
-
-      mediaRepository.update(it)
+      mediaRepository.update(it.copy(
+        status = Media.Status.READY,
+        pages = listOf(BookPage("file", "image/jpeg"))
+      ))
     }
 
     mockMvc.get("/api/v1/books/${book.id}/pages/$page")
@@ -383,9 +381,7 @@ class BookControllerTest(
 
       val book = bookRepository.findAll().first()
       mediaRepository.findById(book.id).let {
-        it.thumbnail = Random.nextBytes(100)
-
-        mediaRepository.update(it)
+        mediaRepository.update(it.copy(thumbnail = Random.nextBytes(100)))
       }
 
 
@@ -441,9 +437,7 @@ class BookControllerTest(
 
       val book = bookRepository.findAll().first()
       mediaRepository.findById(book.id).let {
-        it.thumbnail = Random.nextBytes(1)
-
-        mediaRepository.update(it)
+        mediaRepository.update(it.copy(thumbnail = Random.nextBytes(1)))
       }
 
       val url = "/api/v1/books/${book.id}/thumbnail"
@@ -452,8 +446,7 @@ class BookControllerTest(
 
       Thread.sleep(100)
       mediaRepository.findById(book.id).let {
-        it.thumbnail = Random.nextBytes(1)
-        mediaRepository.update(it)
+        mediaRepository.update(it.copy(thumbnail = Random.nextBytes(1)))
       }
 
       mockMvc.get(url) {

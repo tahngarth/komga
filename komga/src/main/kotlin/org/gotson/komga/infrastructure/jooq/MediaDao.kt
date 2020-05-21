@@ -116,19 +116,18 @@ class MediaDao(
     }
   }
 
-  private fun MediaRecord.toDomain(pages: Collection<BookPage>, files: Collection<String>) =
+  private fun MediaRecord.toDomain(pages: List<BookPage>, files: List<String>) =
     Media(
       status = Media.Status.valueOf(status),
       mediaType = mediaType,
       thumbnail = thumbnail,
       pages = pages,
       files = files,
-      comment = comment
-    ).also {
-      it.bookId = bookId
-      it.createdDate = createdDate
-      it.lastModifiedDate = lastModifiedDate
-    }
+      comment = comment,
+      bookId = bookId,
+      createdDate = createdDate,
+      lastModifiedDate = lastModifiedDate
+    )
 
   private fun MediaPageRecord.toDomain() =
     BookPage(

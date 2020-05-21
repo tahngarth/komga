@@ -73,10 +73,9 @@ class MediaDaoTest(
         mediaType = "image/jpeg"
       )),
       files = listOf("ComicInfo.xml"),
-      comment = "comment"
-    ).also {
-      it.bookId = book.id
-    }
+      comment = "comment",
+      bookId = book.id
+    )
 
     Thread.sleep(5)
 
@@ -100,7 +99,7 @@ class MediaDaoTest(
 
   @Test
   fun `given a minimum media when inserting then it is persisted`() {
-    val media = Media().also { it.bookId = book.id }
+    val media = Media(bookId = book.id)
 
     val created = mediaDao.insert(media)
 
@@ -124,43 +123,44 @@ class MediaDaoTest(
         mediaType = "image/jpeg"
       )),
       files = listOf("ComicInfo.xml"),
-      comment = "comment"
-    ).also {
-      it.bookId = book.id
-    }
+      comment = "comment",
+      bookId = book.id
+    )
     val created = mediaDao.insert(media)
 
     Thread.sleep(5)
 
     val modificationDate = LocalDateTime.now()
 
-    with(created) {
-      status = Media.Status.ERROR
-      mediaType = "application/rar"
-      thumbnail = Random.nextBytes(1)
-      pages = listOf(BookPage(
-        fileName = "2.png",
-        mediaType = "image/png"
-      ))
-      files = listOf("id.txt")
-      comment = "comment2"
+    val updated = with(created) {
+      copy(
+        status = Media.Status.ERROR,
+        mediaType = "application/rar",
+        thumbnail = Random.nextBytes(1),
+        pages = listOf(BookPage(
+          fileName = "2.png",
+          mediaType = "image/png"
+        )),
+        files = listOf("id.txt"),
+        comment = "comment2"
+      )
     }
 
-    mediaDao.update(created)
-    val modified = mediaDao.findById(created.bookId)
+    mediaDao.update(updated)
+    val modified = mediaDao.findById(updated.bookId)
 
-    assertThat(modified.bookId).isEqualTo(created.bookId)
-    assertThat(modified.createdDate).isEqualTo(created.createdDate)
+    assertThat(modified.bookId).isEqualTo(updated.bookId)
+    assertThat(modified.createdDate).isEqualTo(updated.createdDate)
     assertThat(modified.lastModifiedDate)
       .isAfterOrEqualTo(modificationDate)
-      .isNotEqualTo(created.lastModifiedDate)
-    assertThat(modified.status).isEqualTo(created.status)
-    assertThat(modified.mediaType).isEqualTo(created.mediaType)
-    assertThat(modified.thumbnail).isEqualTo(created.thumbnail)
-    assertThat(modified.comment).isEqualTo(created.comment)
-    assertThat(modified.pages.first().fileName).isEqualTo(created.pages.first().fileName)
-    assertThat(modified.pages.first().mediaType).isEqualTo(created.pages.first().mediaType)
-    assertThat(modified.files.first()).isEqualTo(created.files.first())
+      .isNotEqualTo(updated.lastModifiedDate)
+    assertThat(modified.status).isEqualTo(updated.status)
+    assertThat(modified.mediaType).isEqualTo(updated.mediaType)
+    assertThat(modified.thumbnail).isEqualTo(updated.thumbnail)
+    assertThat(modified.comment).isEqualTo(updated.comment)
+    assertThat(modified.pages.first().fileName).isEqualTo(updated.pages.first().fileName)
+    assertThat(modified.pages.first().mediaType).isEqualTo(updated.pages.first().mediaType)
+    assertThat(modified.files.first()).isEqualTo(updated.files.first())
   }
 
   @Test
@@ -174,10 +174,9 @@ class MediaDaoTest(
         mediaType = "image/jpeg"
       )),
       files = listOf("ComicInfo.xml"),
-      comment = "comment"
-    ).also {
-      it.bookId = book.id
-    }
+      comment = "comment",
+      bookId = book.id
+    )
     val created = mediaDao.insert(media)
 
     val found = catchThrowable { mediaDao.findById(created.bookId) }

@@ -416,9 +416,7 @@ class SeriesControllerTest(
 
       bookRepository.findAll().first().let { book ->
         mediaRepository.findById(book.id).let {
-          it.thumbnail = Random.nextBytes(1)
-
-          mediaRepository.update(it)
+          mediaRepository.update(it.copy(thumbnail = Random.nextBytes(1)))
         }
       }
 
@@ -448,8 +446,7 @@ class SeriesControllerTest(
 
       bookRepository.findAll().forEach { book ->
         mediaRepository.findById(book.id).let {
-          it.thumbnail = Random.nextBytes(1)
-          mediaRepository.update(it)
+          mediaRepository.update(it.copy(thumbnail = Random.nextBytes(1)))
         }
       }
 
