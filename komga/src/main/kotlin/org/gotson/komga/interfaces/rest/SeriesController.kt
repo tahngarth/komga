@@ -9,6 +9,8 @@ import mu.KotlinLogging
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.SeriesMetadata
+import org.gotson.komga.domain.persistence.BookSearch
+import org.gotson.komga.domain.persistence.SeriesMetadataRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
 import org.gotson.komga.infrastructure.swagger.PageableAsQueryParam
@@ -18,14 +20,12 @@ import org.gotson.komga.interfaces.rest.dto.SeriesDto
 import org.gotson.komga.interfaces.rest.dto.SeriesMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.restrictUrl
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.gotson.komga.interfaces.rest.persistence.SeriesDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.SeriesSearch
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -49,6 +49,7 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping("api/v1/series", produces = [MediaType.APPLICATION_JSON_VALUE])
 class SeriesController(
   private val seriesRepository: SeriesRepository,
+  private val seriesMetadataRepository: SeriesMetadataRepository,
   private val seriesDtoRepository: SeriesDtoRepository,
   private val bookDtoRepository: BookDtoRepository,
   private val bookController: BookController,
@@ -216,17 +217,17 @@ class SeriesController(
     @Parameter(description = "Metadata fields to update. Set a field to null to unset the metadata. You can omit fields you don't want to update.")
     @Valid @RequestBody newMetadata: SeriesMetadataUpdateDto
   ): SeriesDto =
-    seriesRepository.findByIdOrNull(seriesId)?.let { series ->
+    seriesMetadataRepository.findByIdOrNull(seriesId)?.let { metadata ->
       with(newMetadata) {
-        status?.let { series.metadata.status = it }
-        statusLock?.let { series.metadata.statusLock = it }
-        title?.let { series.metadata.title = it }
-        titleLock?.let { series.metadata.titleLock = it }
-        titleSort?.let { series.metadata.titleSort = it }
-        titleSortLock?.let { series.metadata.titleSortLock = it }
+        status?.let { metadata.status = it }
+        statusLock?.let { metadata.statusLock = it }
+        title?.let { metadata.title = it }
+        titleLock?.let { metadata.titleLock = it }
+        titleSort?.let { metadata.titleSort = it }
+        titleSortLock?.let { metadata.titleSortLock = it }
       }
-      val newSeries = seriesRepository.save(series)
-      seriesDtoRepository.findByIdOrNull(newSeries.id)!!
+      seriesMetadataRepository.update(metadata)
+      seriesDtoRepository.findByIdOrNull(seriesId)!!
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
 }

@@ -1,6 +1,6 @@
 package org.gotson.komga.interfaces.rest.persistence
 
-import org.gotson.komga.domain.model.Media
+import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -19,10 +19,3 @@ interface BookDtoRepository {
   fun findAllIdByLibraryId(libraryId: Long): Collection<Long>
   fun findAllId(bookSearch: BookSearch = BookSearch()): Collection<Long>
 }
-
-data class BookSearch(
-  val libraryIds: Collection<Long> = emptyList(),
-  val seriesIds: Collection<Long> = emptyList(),
-  val searchTerm: String? = null,
-  val mediaStatus: Collection<Media.Status> = emptyList()
-)

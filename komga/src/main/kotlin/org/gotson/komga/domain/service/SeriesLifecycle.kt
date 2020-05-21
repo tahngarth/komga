@@ -1,80 +1,95 @@
 package org.gotson.komga.domain.service
 
+import mu.KotlinLogging
 import net.greypanther.natsort.CaseInsensitiveSimpleNaturalComparator
+import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.domain.model.Book
+import org.gotson.komga.domain.model.BookMetadata
+import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.Series
+import org.gotson.komga.domain.model.SeriesMetadata
+import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
+import org.gotson.komga.domain.persistence.MediaRepository
+import org.gotson.komga.domain.persistence.SeriesMetadataRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
+private val logger = KotlinLogging.logger {}
 private val natSortComparator: Comparator<String> = CaseInsensitiveSimpleNaturalComparator.getInstance()
 
 @Service
 class SeriesLifecycle(
   private val bookRepository: BookRepository,
-  private val seriesRepository: SeriesRepository
+  private val bookLifecycle: BookLifecycle,
+  private val mediaRepository: MediaRepository,
+  private val bookMetadataRepository: BookMetadataRepository,
+  private val seriesRepository: SeriesRepository,
+  private val seriesMetadataRepository: SeriesMetadataRepository
 ) {
 
-  @Transactional
-  fun removeBooksFromSeries(series: Series, bookstoRemove: Collection<Book>) {
-    val existingBooks = bookRepository.findBySeriesId(series.id)
-    var (remove, keep) = existingBooks.partition { book -> bookstoRemove.map { it.url }.contains(book.url) }
+  fun sortBooks(series: Series) {
+    val books = bookRepository.findBySeriesId(series.id)
 
-    bookRepository.deleteAll(remove)
+    val sorted = books.sortedWith(compareBy(natSortComparator) { it.name })
+    sorted.forEachIndexed { index, book ->
+      book.number = index + 1
+      bookRepository.update(book)
 
-    keep = keep.sortedWith(compareBy(natSortComparator) { it.name })
-    keep.forEachIndexed { index, book -> book.number = index + 1 }
-
-    keep.forEach {
-      bookRepository.saveAndFlush(it)
+      bookMetadataRepository.findById(book.id).let { metadata ->
+        var changed = false
+        if (!metadata.numberLock) {
+          metadata.number = book.number.toString()
+          changed = true
+        }
+        if (!metadata.numberSortLock) {
+          metadata.numberSort = book.number.toFloat()
+          changed = true
+        }
+        if (changed) bookMetadataRepository.update(metadata)
+      }
     }
   }
 
-  @Transactional
-  fun updateBooksForSeries(series: Series, booksToAdd: Collection<Book>) {
+  fun addBooks(series: Series, booksToAdd: Collection<Book>) {
     booksToAdd.forEach {
       check(it.libraryId == series.libraryId) { "Cannot add book to series if they don't share the same libraryId" }
     }
 
-    val existingBooks = bookRepository.findBySeriesId(series.id)
-    val remove = existingBooks.filterNot { book -> booksToAdd.map { it.url }.contains(book.url) }
+    booksToAdd.forEach { book ->
+      book.seriesId = series.id
+      val createdBook = bookRepository.insert(book)
 
-    bookRepository.deleteAll(remove)
+      // create associated media
+      mediaRepository.insert(Media().also { it.bookId = createdBook.id })
 
-    val allBooks = booksToAdd.sortedWith(compareBy(natSortComparator) { it.name })
-    allBooks.forEachIndexed { index, book -> book.number = index + 1 }
-
-    // JPA
-    allBooks.forEach {
-      it.seriesId = series.id
-      bookRepository.saveAndFlush(it)
+      // create associated metadata
+      bookMetadataRepository.insert(BookMetadata(
+        title = createdBook.name,
+        number = createdBook.number.toString(),
+        numberSort = createdBook.number.toFloat()
+      ).also { it.bookId = createdBook.id })
     }
-
-
   }
 
-  fun createSeries(series: Series, books: Collection<Book>): Series {
-    books.forEach {
-      check(it.libraryId == series.libraryId) { "Cannot add book to series if they don't share the same libraryId" }
-    }
+  fun createSeries(series: Series): Series {
+    val createdSeries = seriesRepository.insert(series)
 
-    val allBooks = books.sortedWith(compareBy(natSortComparator) { it.name })
-    allBooks.forEachIndexed { index, book -> book.number = index + 1 }
-
-    val createdSeries = seriesRepository.saveAndFlush(series)
-
-    allBooks.forEach {
-      it.seriesId = series.id
-      bookRepository.saveAndFlush(it)
-    }
+    seriesMetadataRepository.insert(
+      SeriesMetadata(title = createdSeries.name).also { it.seriesId = createdSeries.id }
+    )
 
     return createdSeries
   }
 
-  fun deleteSeries(series: Series) {
-    bookRepository.deleteBySeriesId(series.id)
-    seriesRepository.delete(series)
+  fun deleteSeries(seriesId: Long) {
+    logger.info { "Delete series id: $seriesId" }
+
+    bookRepository.findBySeriesId(seriesId).forEach {
+      bookLifecycle.delete(it.id)
+    }
+
+    seriesRepository.delete(seriesId)
   }
 }

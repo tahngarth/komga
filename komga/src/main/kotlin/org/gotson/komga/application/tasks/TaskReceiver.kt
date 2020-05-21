@@ -4,13 +4,13 @@ import mu.KotlinLogging
 import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
+import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_UNIQUE_ID
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.springframework.jms.core.JmsTemplate
 import org.springframework.stereotype.Service
 

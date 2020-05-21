@@ -7,6 +7,8 @@ import org.gotson.komga.domain.model.DuplicateNameException
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.PathContainedInPath
 import org.gotson.komga.domain.persistence.LibraryRepository
+import org.gotson.komga.domain.persistence.SeriesRepository
+import org.gotson.komga.domain.service.SeriesLifecycle
 import org.springframework.stereotype.Service
 import java.io.FileNotFoundException
 import java.nio.file.Files
@@ -16,6 +18,8 @@ private val logger = KotlinLogging.logger {}
 @Service
 class LibraryLifecycle(
   private val libraryRepository: LibraryRepository,
+  private val seriesLifecycle: SeriesLifecycle,
+  private val seriesRepository: SeriesRepository,
   private val taskReceiver: TaskReceiver
 ) {
 
@@ -51,7 +55,12 @@ class LibraryLifecycle(
   }
 
   fun deleteLibrary(library: Library) {
-    logger.info { "Deleting library: ${library.name} with root folder: ${library.root}" }
+    logger.info { "Deleting library: $library" }
+
+    seriesRepository.findByLibraryId(library.id).forEach {
+      seriesLifecycle.deleteSeries(it.id)
+    }
+
     libraryRepository.delete(library.id)
   }
 }

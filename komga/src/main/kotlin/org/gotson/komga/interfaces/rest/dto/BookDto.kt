@@ -3,10 +3,6 @@ package org.gotson.komga.interfaces.rest.dto
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.jakewharton.byteunits.BinaryByteUnit
 import org.apache.commons.io.FilenameUtils
-import org.gotson.komga.domain.model.Author
-import org.gotson.komga.domain.model.Book
-import org.gotson.komga.domain.model.BookMetadata
-import org.gotson.komga.domain.model.Media
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -66,49 +62,3 @@ data class AuthorDto(
   val role: String
 )
 
-fun Book.toDto(includeFullUrl: Boolean) =
-  BookDto(
-    id = id,
-    seriesId = seriesId,
-    libraryId = libraryId,
-    name = name,
-    url = if (includeFullUrl) url.toURI().path else FilenameUtils.getName(url.toURI().path),
-    number = number,
-    created = createdDate?.toUTC(),
-    lastModified = lastModifiedDate?.toUTC(),
-    fileLastModified = fileLastModified.toUTC(),
-    sizeBytes = fileSize,
-    size = fileSizeHumanReadable(),
-    media = media.toDto(),
-    metadata = metadata.toDto()
-  )
-
-fun Media.toDto() = MediaDto(
-  status = status.toString(),
-  mediaType = mediaType ?: "",
-  pagesCount = pages.size,
-  comment = comment ?: ""
-)
-
-fun BookMetadata.toDto() = BookMetadataDto(
-  title = title,
-  titleLock = titleLock,
-  summary = summary,
-  summaryLock = summaryLock,
-  number = number,
-  numberLock = numberLock,
-  numberSort = numberSort,
-  numberSortLock = numberSortLock,
-  readingDirection = readingDirection?.name ?: "",
-  readingDirectionLock = readingDirectionLock,
-  publisher = publisher,
-  publisherLock = publisherLock,
-  ageRating = ageRating,
-  ageRatingLock = ageRatingLock,
-  releaseDate = releaseDate,
-  releaseDateLock = releaseDateLock,
-  authors = authors.map { it.toDto() },
-  authorsLock = authorsLock
-)
-
-fun Author.toDto() = AuthorDto(name = name, role = role)

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.net.URL
 
@@ -31,11 +32,11 @@ class SeriesDtoDao(
 
   private val groupFields = arrayOf(
     *s.fields(),
-    *s.seriesMetadata().fields()
+    *d.fields()
   )
 
   private val sorts = mapOf(
-    "metadata.titleSort" to DSL.lower(s.seriesMetadata().TITLE_SORT),
+    "metadata.titleSort" to DSL.lower(d.TITLE_SORT),
     "createdDate" to s.CREATED_DATE,
     "lastModifiedDate" to s.LAST_MODIFIED_DATE
   )
@@ -44,6 +45,18 @@ class SeriesDtoDao(
     val conditions = search.toCondition()
 
     return findAll(conditions, pageable)
+  }
+
+  override fun findAll(search: SeriesSearch, sort: Sort): Collection<SeriesDto> {
+    val conditions = search.toCondition()
+
+    val orderBy = sort.toOrderBy(sorts)
+
+    return selectBase()
+      .where(conditions)
+      .groupBy(*groupFields)
+      .orderBy(orderBy)
+      .fetchAndMap()
   }
 
   override fun findRecentlyUpdated(search: SeriesSearch, pageable: Pageable): Page<SeriesDto> {
@@ -69,11 +82,10 @@ class SeriesDtoDao(
   private fun findAll(conditions: Condition, pageable: Pageable): Page<SeriesDto> {
     val count = dsl.selectCount()
       .from(s)
-      .join(d).onKey()
       .where(conditions)
       .fetchOne(0, Int::class.java)
 
-    val orderBy = pageable.toOrderBy(sorts)
+    val orderBy = pageable.sort.toOrderBy(sorts)
 
     val dtos = selectBase()
       .where(conditions)
@@ -95,12 +107,13 @@ class SeriesDtoDao(
       .select(DSL.count(b.ID).`as`("bookCount"))
       .from(s)
       .leftJoin(b).on(s.ID.eq(b.SERIES_ID))
+      .leftJoin(d).on(s.ID.eq(d.SERIES_ID))
 
   private fun ResultQuery<Record>.fetchAndMap() =
     fetch()
       .map { r ->
         val sr = r.into(s)
-        val dr = r.into(s.seriesMetadata())
+        val dr = r.into(d)
         val bookCount = r["bookCount"] as Int
         sr.toDto(bookCount, dr.toDto())
       }
@@ -109,8 +122,8 @@ class SeriesDtoDao(
     var c: Condition = DSL.trueCondition()
 
     if (libraryIds.isNotEmpty()) c = c.and(s.LIBRARY_ID.`in`(libraryIds))
-    searchTerm?.let { c = c.and(s.seriesMetadata().TITLE.containsIgnoreCase(searchTerm)) }
-    if (metadataStatus.isNotEmpty()) c = c.and(s.seriesMetadata().STATUS.`in`(metadataStatus))
+    searchTerm?.let { c = c.and(d.TITLE.containsIgnoreCase(searchTerm)) }
+    if (metadataStatus.isNotEmpty()) c = c.and(d.STATUS.`in`(metadataStatus))
 
     return c
   }

@@ -23,7 +23,7 @@ class LibraryDao(
     dsl.selectFrom(l)
       .where(l.ID.eq(libraryId))
       .fetchOneInto(l)
-      .toDomain()
+      ?.toDomain()
 
   override fun findAll(): Collection<Library> =
     dsl.selectFrom(l)
@@ -46,8 +46,6 @@ class LibraryDao(
     dsl.transaction { config ->
       with(config.dsl())
       {
-        deleteFrom(b).where(b.LIBRARY_ID.eq(libraryId)).execute()
-        deleteFrom(s).where(s.LIBRARY_ID.eq(libraryId)).execute()
         deleteFrom(ul).where(ul.LIBRARY_ID.eq(libraryId)).execute()
         deleteFrom(l).where(l.ID.eq(libraryId)).execute()
       }
@@ -58,8 +56,6 @@ class LibraryDao(
     dsl.transaction { config ->
       with(config.dsl())
       {
-        deleteFrom(b).execute()
-        deleteFrom(s).execute()
         deleteFrom(ul).execute()
         deleteFrom(l).execute()
       }
@@ -77,6 +73,8 @@ class LibraryDao(
 
     return findByIdOrNull(id)!!
   }
+
+  override fun count(): Long = dsl.fetchCount(l).toLong()
 
 
   private fun LibraryRecord.toDomain() =

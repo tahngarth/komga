@@ -1,7 +1,6 @@
 package org.gotson.komga.infrastructure.jooq
 
 import org.gotson.komga.domain.model.KomgaUser
-import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.persistence.KomgaUserRepository
 import org.gotson.komga.jooq.Sequences.HIBERNATE_SEQUENCE
 import org.gotson.komga.jooq.Tables
@@ -21,7 +20,7 @@ class KomgaUserDao(
 
   override fun count(): Long = dsl.fetchCount(u).toLong()
 
-  override fun findAll(): Iterable<KomgaUser> =
+  override fun findAll(): Collection<KomgaUser> =
     selectBase()
       .fetchAndMap()
 
@@ -89,7 +88,8 @@ class KomgaUserDao(
     return findByIdOrNull(id)!!
   }
 
-  override fun saveAll(users: Iterable<KomgaUser>): Iterable<KomgaUser> = users.map { save(it) }
+  override fun saveAll(users: Iterable<KomgaUser>): Collection<KomgaUser> =
+    users.map { save(it) }
 
   override fun delete(user: KomgaUser) {
     dsl.transaction { config ->
@@ -122,11 +122,4 @@ class KomgaUserDao(
       .where(u.EMAIL.equalIgnoreCase(email))
       .fetchAndMap()
       .firstOrNull()
-
-  override fun findBySharedLibrariesContaining(library: Library): List<KomgaUser> =
-    selectBase()
-      .leftJoin(ul).on(u.ID.eq(ul.USER_ID))
-      .where(ul.LIBRARY_ID.equal(library.id))
-      .fetchAndMap()
-
 }

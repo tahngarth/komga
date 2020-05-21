@@ -9,11 +9,13 @@ import mu.KotlinLogging
 import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.Author
-import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.model.ImageConversionException
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.MediaNotReadyException
+import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
+import org.gotson.komga.domain.persistence.BookSearch
+import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.infrastructure.image.ImageType
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
 import org.gotson.komga.infrastructure.swagger.PageableAsQueryParam
@@ -22,15 +24,12 @@ import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.PageDto
 import org.gotson.komga.interfaces.rest.dto.restrictUrl
-import org.gotson.komga.interfaces.rest.dto.toDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.springframework.core.io.FileSystemResource
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.CacheControl
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
@@ -62,6 +61,8 @@ private val logger = KotlinLogging.logger {}
 @RequestMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
 class BookController(
   private val bookRepository: BookRepository,
+  private val mediaRepository: MediaRepository,
+  private val bookMetadataRepository: BookMetadataRepository,
   private val bookDtoRepository: BookDtoRepository,
   private val bookLifecycle: BookLifecycle,
   private val taskReceiver: TaskReceiver
@@ -184,6 +185,7 @@ class BookController(
     bookRepository.findByIdOrNull(bookId)?.let { book ->
       if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
       try {
+        val media = mediaRepository.findById(book.id)
         with(FileSystemResource(book.path())) {
           if (!exists()) throw FileNotFoundException(path)
           ResponseEntity.ok()
@@ -192,7 +194,7 @@ class BookController(
                 .filename(book.fileName())
                 .build()
             })
-            .contentType(getMediaTypeOrDefault(book.media.mediaType))
+            .contentType(getMediaTypeOrDefault(media.mediaType))
             .body(this)
         }
       } catch (ex: FileNotFoundException) {
@@ -207,12 +209,14 @@ class BookController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
   ): List<PageDto> =
-    bookRepository.findByIdOrNull((bookId))?.let {
-      if (!principal.user.canAccessBook(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-      if (it.media.status == Media.Status.UNKNOWN) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Book has not been analyzed yet")
-      if (it.media.status in listOf(Media.Status.ERROR, Media.Status.UNSUPPORTED)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Book analysis failed")
+    bookRepository.findByIdOrNull((bookId))?.let { book ->
+      if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
 
-      it.media.pages.mapIndexed { index, s -> PageDto(index + 1, s.fileName, s.mediaType) }
+      val media = mediaRepository.findById(book.id)
+      if (media.status == Media.Status.UNKNOWN) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Book has not been analyzed yet")
+      if (media.status in listOf(Media.Status.ERROR, Media.Status.UNSUPPORTED)) throw ResponseStatusException(HttpStatus.NOT_FOUND, "Book analysis failed")
+
+      media.pages.mapIndexed { index, s -> PageDto(index + 1, s.fileName, s.mediaType) }
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   @ApiResponse(content = [Content(
@@ -234,10 +238,11 @@ class BookController(
     @RequestParam(value = "zero_based", defaultValue = "false") zeroBasedIndex: Boolean
   ): ResponseEntity<ByteArray> =
     bookRepository.findByIdOrNull((bookId))?.let { book ->
-      if (request.checkNotModified(getBookLastModified(book))) {
+      val media = mediaRepository.findById(bookId)
+      if (request.checkNotModified(getBookLastModified(media))) {
         return@let ResponseEntity
           .status(HttpStatus.NOT_MODIFIED)
-          .setNotModified(book)
+          .setNotModified(media)
           .body(ByteArray(0))
       }
       if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
@@ -255,7 +260,7 @@ class BookController(
 
         ResponseEntity.ok()
           .contentType(getMediaTypeOrDefault(pageContent.mediaType))
-          .setNotModified(book)
+          .setNotModified(media)
           .body(pageContent.content)
       } catch (ex: IndexOutOfBoundsException) {
         throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Page number does not exist")
@@ -281,10 +286,11 @@ class BookController(
     @PathVariable pageNumber: Int
   ): ResponseEntity<ByteArray> =
     bookRepository.findByIdOrNull((bookId))?.let { book ->
-      if (request.checkNotModified(getBookLastModified(book))) {
+      val media = mediaRepository.findById(bookId)
+      if (request.checkNotModified(getBookLastModified(media))) {
         return@let ResponseEntity
           .status(HttpStatus.NOT_MODIFIED)
-          .setNotModified(book)
+          .setNotModified(media)
           .body(ByteArray(0))
       }
       if (!principal.user.canAccessBook(book)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
@@ -293,7 +299,7 @@ class BookController(
 
         ResponseEntity.ok()
           .contentType(getMediaTypeOrDefault(pageContent.mediaType))
-          .setNotModified(book)
+          .setNotModified(media)
           .body(pageContent.content)
       } catch (ex: IndexOutOfBoundsException) {
         throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Page number does not exist")
@@ -332,36 +338,37 @@ class BookController(
     @Parameter(description = "Metadata fields to update. Set a field to null to unset the metadata. You can omit fields you don't want to update.")
     @Valid @RequestBody newMetadata: BookMetadataUpdateDto
   ): BookDto =
-    bookRepository.findByIdOrNull(bookId)?.let { book ->
+    bookMetadataRepository.findByIdOrNull(bookId)?.let { metadata ->
       with(newMetadata) {
-        title?.let { book.metadata.title = it }
-        titleLock?.let { book.metadata.titleLock = it }
-        summary?.let { book.metadata.summary = it }
-        summaryLock?.let { book.metadata.summaryLock = it }
-        number?.let { book.metadata.number = it }
-        numberLock?.let { book.metadata.numberLock = it }
-        numberSort?.let { book.metadata.numberSort = it }
-        numberSortLock?.let { book.metadata.numberSortLock = it }
-        if (isSet("readingDirection")) book.metadata.readingDirection = newMetadata.readingDirection
-        readingDirectionLock?.let { book.metadata.readingDirectionLock = it }
-        publisher?.let { book.metadata.publisher = it }
-        publisherLock?.let { book.metadata.publisherLock = it }
-        if (isSet("ageRating")) book.metadata.ageRating = newMetadata.ageRating
-        ageRatingLock?.let { book.metadata.ageRatingLock = it }
+        title?.let { metadata.title = it }
+        titleLock?.let { metadata.titleLock = it }
+        summary?.let { metadata.summary = it }
+        summaryLock?.let { metadata.summaryLock = it }
+        number?.let { metadata.number = it }
+        numberLock?.let { metadata.numberLock = it }
+        numberSort?.let { metadata.numberSort = it }
+        numberSortLock?.let { metadata.numberSortLock = it }
+        if (isSet("readingDirection")) metadata.readingDirection = newMetadata.readingDirection
+        readingDirectionLock?.let { metadata.readingDirectionLock = it }
+        publisher?.let { metadata.publisher = it }
+        publisherLock?.let { metadata.publisherLock = it }
+        if (isSet("ageRating")) metadata.ageRating = newMetadata.ageRating
+        ageRatingLock?.let { metadata.ageRatingLock = it }
         if (isSet("releaseDate")) {
-          book.metadata.releaseDate = newMetadata.releaseDate
+          metadata.releaseDate = newMetadata.releaseDate
         }
-        releaseDateLock?.let { book.metadata.releaseDateLock = it }
+        releaseDateLock?.let { metadata.releaseDateLock = it }
         if (isSet("authors")) {
           if (authors != null) {
-            book.metadata.authors = authors!!.map {
+            metadata.authors = authors!!.map {
               Author(it.name ?: "", it.role ?: "")
             }.toMutableList()
-          } else book.metadata.authors = mutableListOf()
+          } else metadata.authors = mutableListOf()
         }
-        authorsLock?.let { book.metadata.authorsLock = it }
+        authorsLock?.let { metadata.authorsLock = it }
       }
-      bookRepository.save(book).toDto(includeFullUrl = true)
+      bookMetadataRepository.update(metadata)
+      bookDtoRepository.findByIdOrNull(bookId)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
   private fun ResponseEntity.BodyBuilder.setCachePrivate() =
@@ -370,11 +377,11 @@ class BookController(
       .mustRevalidate()
     )
 
-  private fun ResponseEntity.BodyBuilder.setNotModified(book: Book) =
-    this.setCachePrivate().lastModified(getBookLastModified(book))
+  private fun ResponseEntity.BodyBuilder.setNotModified(media: Media) =
+    this.setCachePrivate().lastModified(getBookLastModified(media))
 
-  private fun getBookLastModified(book: Book) =
-    book.media.lastModifiedDate!!.toInstant(ZoneOffset.UTC).toEpochMilli()
+  private fun getBookLastModified(media: Media) =
+    media.lastModifiedDate!!.toInstant(ZoneOffset.UTC).toEpochMilli()
 
 
   private fun getMediaTypeOrDefault(mediaTypeString: String?): MediaType {

@@ -4,13 +4,13 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.verify
 import mu.KotlinLogging
+import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.application.service.MetadataLifecycle
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
-import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.domain.service.SeriesLifecycle
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.junit.jupiter.api.AfterAll
@@ -34,9 +34,9 @@ class TaskHandlerTest(
   @Autowired private val taskReceiver: TaskReceiver,
   @Autowired private val jmsTemplate: JmsTemplate,
   @Autowired private val libraryRepository: LibraryRepository,
-  @Autowired private val seriesRepository: SeriesRepository,
   @Autowired private val bookRepository: BookRepository,
-  @Autowired private val seriesLifecycle: SeriesLifecycle
+  @Autowired private val seriesLifecycle: SeriesLifecycle,
+  @Autowired private val libraryLifecycle: LibraryLifecycle
 ) {
 
   @MockkBean
@@ -60,8 +60,7 @@ class TaskHandlerTest(
 
   @AfterEach
   fun `clear repository`() {
-    bookRepository.deleteAll()
-    seriesRepository.deleteAll()
+    libraryLifecycle.deleteLibrary(library)
   }
 
   @AfterEach
@@ -75,12 +74,16 @@ class TaskHandlerTest(
   fun `when similar tasks are submitted then only a few are executed`() {
     val book = makeBook("book").also { it.libraryId = library.id }
     val series = makeSeries("series").also { it.libraryId = library.id }
-    seriesLifecycle.createSeries(series, listOf(book))
+    seriesLifecycle.createSeries(series).let {
+      seriesLifecycle.addBooks(it, listOf(book))
+    }
 
     every { mockMetadataLifecycle.refreshMetadata(any()) } answers { Thread.sleep(1_000) }
 
+    val createdBook = bookRepository.findAll().first()
+
     repeat(100) {
-      taskReceiver.refreshBookMetadata(book)
+      taskReceiver.refreshBookMetadata(createdBook)
     }
 
     Thread.sleep(5_000)

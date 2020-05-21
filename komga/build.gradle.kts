@@ -16,7 +16,6 @@ plugins {
     kotlin("kapt") version kotlinVersion
   }
   id("org.springframework.boot") version "2.2.6.RELEASE"
-//  id("io.spring.dependency-management") version "1.0.9.RELEASE"
   id("com.github.ben-manes.versions") version "0.28.0"
   id("com.gorylenko.gradle-git-properties") version "2.2.2"
   id("com.rohanprabhu.kotlin-dsl-jooq") version "0.4.5"
@@ -28,8 +27,6 @@ group = "org.gotson"
 
 val developmentOnly = configurations.create("developmentOnly")
 configurations.runtimeClasspath.get().extendsFrom(developmentOnly)
-
-//extra["jooq.version"] = "3.13.1"
 
 repositories {
   jcenter()
@@ -55,9 +52,8 @@ dependencies {
   implementation(platform("org.springframework.boot:spring-boot-dependencies:2.2.6.RELEASE"))
 
   implementation("org.springframework.boot:spring-boot-starter-web")
-  implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+  implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
   implementation("org.springframework.boot:spring-boot-starter-actuator")
-  implementation("org.springframework.boot:spring-boot-starter-cache")
   implementation("org.springframework.boot:spring-boot-starter-security")
   implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
   implementation("org.springframework.boot:spring-boot-starter-artemis")
@@ -68,10 +64,6 @@ dependencies {
   implementation("org.apache.activemq:artemis-jms-server")
 
   implementation("org.flywaydb:flyway-core")
-  implementation("org.hibernate:hibernate-jcache")
-
-  implementation("com.github.ben-manes.caffeine:caffeine")
-  implementation("com.github.ben-manes.caffeine:jcache")
 
   implementation("io.github.microutils:kotlin-logging:1.7.9")
   implementation("io.micrometer:micrometer-registry-influx")
@@ -145,7 +137,7 @@ tasks {
   }
 
   //unpack Spring Boot's fat jar for better Docker image layering
-  register<Copy>("unpack") {
+  register<Sync>("unpack") {
     dependsOn(bootJar)
     from(zipTree(getByName("bootJar").outputs.files.singleFile))
     into("$buildDir/dependency")
@@ -239,10 +231,9 @@ flyway {
 //in order to include the Java migrations, flywayClasses must be run before flywayMigrate
 tasks.flywayMigrate {
   dependsOn("flywayClasses")
-  migrationDirs.forEach {
-    inputs.dir(it)
-  }
+  migrationDirs.forEach { inputs.dir(it) }
   outputs.dir("${project.buildDir}/generated/flyway")
+  doFirst { delete(outputs.files) }
 }
 
 jooqGenerator {

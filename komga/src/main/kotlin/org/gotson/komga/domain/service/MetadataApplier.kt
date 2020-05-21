@@ -1,9 +1,9 @@
 package org.gotson.komga.domain.service
 
 import mu.KotlinLogging
-import org.gotson.komga.domain.model.Book
+import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.BookMetadataPatch
-import org.gotson.komga.domain.model.Series
+import org.gotson.komga.domain.model.SeriesMetadata
 import org.gotson.komga.domain.model.SeriesMetadataPatch
 import org.springframework.stereotype.Service
 
@@ -12,10 +12,10 @@ private val logger = KotlinLogging.logger {}
 @Service
 class MetadataApplier {
 
-  fun apply(patch: BookMetadataPatch, book: Book) {
-    logger.debug { "Apply metadata for book: $book" }
+  fun apply(patch: BookMetadataPatch, metadata: BookMetadata) {
+    logger.debug { "Apply metadata for book: ${metadata.bookId}" }
 
-    with(book.metadata) {
+    with(metadata) {
       patch.title?.let {
         if (!titleLock) {
           logger.debug { "Update title: $it" }
@@ -91,10 +91,8 @@ class MetadataApplier {
     }
   }
 
-  fun apply(patch: SeriesMetadataPatch, series: Series) {
-    logger.debug { "Apply metadata for series: $series" }
-
-    with(series.metadata) {
+  fun apply(patch: SeriesMetadataPatch, seriesMetadata: SeriesMetadata) {
+    with(seriesMetadata) {
       patch.title?.let {
         if (!titleLock) {
           logger.debug { "Update title: $it" }

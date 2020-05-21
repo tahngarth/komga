@@ -1,11 +1,11 @@
 package org.gotson.komga.infrastructure.jooq
 
+import org.gotson.komga.domain.persistence.BookSearch
 import org.gotson.komga.interfaces.rest.dto.AuthorDto
 import org.gotson.komga.interfaces.rest.dto.BookDto
 import org.gotson.komga.interfaces.rest.dto.BookMetadataDto
 import org.gotson.komga.interfaces.rest.dto.MediaDto
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.BookSearch
 import org.gotson.komga.jooq.Tables
 import org.gotson.komga.jooq.tables.records.BookMetadataAuthorRecord
 import org.gotson.komga.jooq.tables.records.BookMetadataRecord
@@ -34,16 +34,16 @@ class BookDtoDao(
   private val d = Tables.BOOK_METADATA
   private val a = Tables.BOOK_METADATA_AUTHOR
 
-  private val mediaFields = b.media().fields().filterNot { it.name == b.media().THUMBNAIL.name }.toTypedArray()
+  private val mediaFields = m.fields().filterNot { it.name == m.THUMBNAIL.name }.toTypedArray()
   private val groupFields = arrayOf(
     *b.fields(),
     *mediaFields,
-    *b.bookMetadata().fields(),
+    *d.fields(),
     *a.fields()
   )
 
   private val sorts = mapOf(
-    "metadata.numberSort" to b.bookMetadata().NUMBER_SORT,
+    "metadata.numberSort" to d.NUMBER_SORT,
     "createdDate" to b.CREATED_DATE,
     "lastModifiedDate" to b.LAST_MODIFIED_DATE,
     "fileSize" to b.FILE_SIZE
@@ -54,12 +54,12 @@ class BookDtoDao(
 
     val count = dsl.selectCount()
       .from(b)
-      .join(m).on(b.MEDIA_ID.eq(m.ID))
-      .join(d).on(b.METADATA_ID.eq(d.ID))
+      .leftJoin(m).on(b.ID.eq(m.BOOK_ID))
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
       .where(conditions)
-      .fetchOne(0, Int::class.java)
+      .fetchOne(0, Long::class.java)
 
-    val orderBy = pageable.toOrderBy(sorts)
+    val orderBy = pageable.sort.toOrderBy(sorts)
 
     val dtos = selectBase()
       .where(conditions)
@@ -90,8 +90,9 @@ class BookDtoDao(
       .fetchOne(0, Long::class.java)
 
   override fun getThumbnail(bookId: Long): ByteArray? =
-    dsl.select(b.media().THUMBNAIL)
+    dsl.select(m.THUMBNAIL)
       .from(b)
+      .leftJoin(m).on(b.ID.eq(m.BOOK_ID))
       .where(b.ID.eq(bookId))
       .fetchOne(0, ByteArray::class.java)
 
@@ -102,8 +103,9 @@ class BookDtoDao(
   override fun findFirstIdInSeries(seriesId: Long): Long? =
     dsl.select(b.ID)
       .from(b)
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
       .where(b.SERIES_ID.eq(seriesId))
-      .orderBy(b.bookMetadata().NUMBER_SORT)
+      .orderBy(d.NUMBER_SORT)
       .limit(1)
       .fetchOne(0, Long::class.java)
 
@@ -124,13 +126,15 @@ class BookDtoDao(
 
     return dsl.select(b.ID)
       .from(b)
+      .leftJoin(m).on(b.ID.eq(m.BOOK_ID))
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
       .where(conditions)
       .fetch(0, Long::class.java)
   }
 
 
   private fun findSibling(bookId: Long, next: Boolean): BookDto? {
-    val record = dsl.select(b.SERIES_ID, b.bookMetadata().NUMBER_SORT)
+    val record = dsl.select(b.SERIES_ID, d.NUMBER_SORT)
       .from(b)
       .where(b.ID.eq(bookId))
       .fetchOne()
@@ -140,7 +144,7 @@ class BookDtoDao(
     return selectBase()
       .where(b.SERIES_ID.eq(seriesId))
       .groupBy(*groupFields)
-      .orderBy(b.bookMetadata().NUMBER_SORT.let { if (next) it.asc() else it.desc() })
+      .orderBy(d.NUMBER_SORT.let { if (next) it.asc() else it.desc() })
       .seek(numberSort)
       .limit(1)
       .fetchAndMap()
@@ -151,16 +155,18 @@ class BookDtoDao(
     dsl.select(*groupFields)
       .select(DSL.count(p.NUMBER).`as`("pageCount"))
       .from(b)
-      .leftJoin(p).on(b.media().ID.eq(p.MEDIA_ID))
-      .leftJoin(a).on(b.bookMetadata().ID.eq(a.BOOK_METADATA_ID))
+      .leftJoin(m).on(b.ID.eq(m.BOOK_ID))
+      .leftJoin(p).on(m.BOOK_ID.eq(p.BOOK_ID))
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
+      .leftJoin(a).on(d.BOOK_ID.eq(a.BOOK_ID))
 
   private fun ResultQuery<Record>.fetchAndMap() =
     fetchGroups(
-      { it.into(*b.fields(), *mediaFields, *b.bookMetadata().fields(), DSL.field("pageCount")) }, { it.into(a) }
+      { it.into(*b.fields(), *mediaFields, *d.fields(), DSL.field("pageCount")) }, { it.into(a) }
     ).map { (r, ar) ->
       val br = r.into(b)
-      val mr = r.into(b.media())
-      val dr = r.into(b.bookMetadata())
+      val mr = r.into(m)
+      val dr = r.into(d)
       val pageCount = r["pageCount"] as Int
       br.toDto(mr.toDto(pageCount), dr.toDto(ar))
     }
@@ -170,8 +176,8 @@ class BookDtoDao(
 
     if (libraryIds.isNotEmpty()) c = c.and(b.LIBRARY_ID.`in`(libraryIds))
     if (seriesIds.isNotEmpty()) c = c.and(b.SERIES_ID.`in`(seriesIds))
-    searchTerm?.let { c = c.and(b.bookMetadata().TITLE.containsIgnoreCase(it)) }
-    if (mediaStatus.isNotEmpty()) c = c.and(b.media().STATUS.`in`(mediaStatus))
+    searchTerm?.let { c = c.and(d.TITLE.containsIgnoreCase(it)) }
+    if (mediaStatus.isNotEmpty()) c = c.and(m.STATUS.`in`(mediaStatus))
 
     return c
   }

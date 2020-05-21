@@ -1,7 +1,8 @@
 package org.gotson.komga.interfaces.rest
 
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.tuple
+import org.assertj.core.groups.Tuple.tuple
+import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.BookPage
@@ -9,8 +10,10 @@ import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
+import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
+import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.domain.service.SeriesLifecycle
 import org.junit.jupiter.api.AfterAll
@@ -26,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
@@ -35,7 +37,6 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.MockMvcResultMatchersDsl
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.patch
-import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import javax.sql.DataSource
 import kotlin.random.Random
@@ -47,7 +48,10 @@ import kotlin.random.Random
 class BookControllerTest(
   @Autowired private val seriesRepository: SeriesRepository,
   @Autowired private val seriesLifecycle: SeriesLifecycle,
+  @Autowired private val mediaRepository: MediaRepository,
+  @Autowired private val bookMetadataRepository: BookMetadataRepository,
   @Autowired private val libraryRepository: LibraryRepository,
+  @Autowired private val libraryLifecycle: LibraryLifecycle,
   @Autowired private val bookRepository: BookRepository,
   @Autowired private val mockMvc: MockMvc
 ) {
@@ -70,13 +74,16 @@ class BookControllerTest(
 
   @AfterAll
   fun `teardown library`() {
-    libraryRepository.deleteAll()
+    libraryRepository.findAll().forEach {
+      libraryLifecycle.deleteLibrary(it)
+    }
   }
 
   @AfterEach
   fun `clear repository`() {
-    bookRepository.deleteAll()
-    seriesRepository.deleteAll()
+    seriesRepository.findAll().forEach {
+      seriesLifecycle.deleteSeries(it.id)
+    }
   }
 
   @Nested
@@ -84,14 +91,20 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [1])
     fun `given user with access to a single library when getting books then only gets books from this library`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val otherLibrary = libraryRepository.insert(makeLibrary("other"))
-      val otherSeries = makeSeries(name = "otherSeries").also { it.libraryId = otherLibrary.id }
-      val otherBooks = listOf(makeBook("2")).also { list -> list.forEach { it.libraryId = otherLibrary.id } }
-      seriesLifecycle.createSeries(otherSeries, otherBooks)
+      makeSeries(name = "otherSeries").also { it.libraryId = otherLibrary.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val otherBooks = listOf(makeBook("2")).also { list -> list.forEach { it.libraryId = otherLibrary.id } }
+          seriesLifecycle.addBooks(created, otherBooks)
+        }
+      }
 
       mockMvc.get("/api/v1/books")
         .andExpect {
@@ -108,9 +121,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific book then returns unauthorized`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -121,9 +137,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific book thumbnail then returns unauthorized`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -134,9 +153,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific book file then returns unauthorized`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -147,9 +169,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific book pages then returns unauthorized`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -160,9 +185,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(sharedAllLibraries = false, sharedLibraries = [])
     fun `given user with no access to any library when getting specific book page then returns unauthorized`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -176,9 +204,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser
     fun `given book without thumbnail when getting book thumbnail then returns not found`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -189,9 +220,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser
     fun `given book without file when getting book file then returns not found`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -203,11 +237,18 @@ class BookControllerTest(
     @EnumSource(value = Media.Status::class, names = ["READY"], mode = EnumSource.Mode.EXCLUDE)
     @WithMockCustomUser
     fun `given book with media status not ready when getting book pages then returns not found`(status: Media.Status) {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1").also { it.media.status = status }).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
+      mediaRepository.findById(book.id).let {
+        it.status = status
+        mediaRepository.update(it)
+      }
 
       mockMvc.get("/api/v1/books/${book.id}/pages")
         .andExpect { status { isNotFound } }
@@ -217,11 +258,18 @@ class BookControllerTest(
     @EnumSource(value = Media.Status::class, names = ["READY"], mode = EnumSource.Mode.EXCLUDE)
     @WithMockCustomUser
     fun `given book with media status not ready when getting specific book page then returns not found`(status: Media.Status) {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1").also { it.media.status = status }).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).let { created ->
+          val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
+      mediaRepository.findById(book.id).let {
+        it.status = status
+        mediaRepository.update(it)
+      }
 
       mockMvc.get("/api/v1/books/${book.id}/pages/1")
         .andExpect { status { isNotFound } }
@@ -232,15 +280,20 @@ class BookControllerTest(
   @ValueSource(strings = ["25", "-5", "0"])
   @WithMockCustomUser
   fun `given book with pages when getting non-existent page then returns bad request`(page: String) {
-    val series = makeSeries(name = "series").also { it.libraryId = library.id }
-    val books = listOf(makeBook("1").also {
-      it.media.pages = listOf(BookPage("file", "image/jpeg"))
-      it.media.status = Media.Status.READY
+    makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+      seriesLifecycle.createSeries(series).let { created ->
+        val books = listOf(makeBook("1")).also { list -> list.forEach { it.libraryId = library.id } }
+        seriesLifecycle.addBooks(created, books)
+      }
     }
-    ).also { list -> list.forEach { it.libraryId = library.id } }
-    seriesLifecycle.createSeries(series, books)
 
     val book = bookRepository.findAll().first()
+    mediaRepository.findById(book.id).let {
+      it.status = Media.Status.READY
+      it.pages = listOf(BookPage("file", "image/jpeg"))
+
+      mediaRepository.update(it)
+    }
 
     mockMvc.get("/api/v1/books/${book.id}/pages/$page")
       .andExpect { status { isBadRequest } }
@@ -251,9 +304,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser
     fun `given regular user when getting books then full url is hidden`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -268,7 +324,7 @@ class BookControllerTest(
       mockMvc.get("/api/v1/books/latest")
         .andExpect(validation)
 
-      mockMvc.get("/api/v1/series/${series.id}/books")
+      mockMvc.get("/api/v1/series/${createdSeries.id}/books")
         .andExpect(validation)
 
       mockMvc.get("/api/v1/books/${book.id}")
@@ -281,9 +337,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser(roles = ["ADMIN"])
     fun `given admin user when getting books then full url is available`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      val createdSeries = makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -299,7 +358,7 @@ class BookControllerTest(
       mockMvc.get("/api/v1/books/latest")
         .andExpect(validation)
 
-      mockMvc.get("/api/v1/series/${series.id}/books")
+      mockMvc.get("/api/v1/series/${createdSeries.id}/books")
         .andExpect(validation)
 
       mockMvc.get("/api/v1/books/${book.id}")
@@ -315,13 +374,19 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser
     fun `given request with cache headers when getting thumbnail then returns 304 not modified`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1.cbr").also {
-        it.media.thumbnail = Random.nextBytes(100)
-      }).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
+      mediaRepository.findById(book.id).let {
+        it.thumbnail = Random.nextBytes(100)
+
+        mediaRepository.update(it)
+      }
 
 
       val url = "/api/v1/books/${book.id}/thumbnail"
@@ -341,9 +406,12 @@ class BookControllerTest(
     @Test
     @WithMockCustomUser
     fun `given request with If-Modified-Since headers when getting page then returns 304 not modified`() {
-      val series = makeSeries(name = "series").also { it.libraryId = library.id }
-      val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
-      seriesLifecycle.createSeries(series, books)
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
       val book = bookRepository.findAll().first()
 
@@ -360,36 +428,41 @@ class BookControllerTest(
         status { isNotModified }
       }
     }
-  }
 
-  //Not part of the above @Nested class because @Transactional fails
-  @Test
-  @WithMockCustomUser
-  @Transactional
-  fun `given request with cache headers and modified resource when getting thumbnail then returns 200 ok`() {
-    val series = makeSeries(name = "series").also { it.libraryId = library.id }
-    val books = listOf(makeBook("1.cbr").also {
-      it.media.thumbnail = Random.nextBytes(1)
-    }).also { list -> list.forEach { it.libraryId = library.id } }
-    seriesLifecycle.createSeries(series, books)
-
-    val book = bookRepository.findAll().first()
-
-    val url = "/api/v1/books/${book.id}/thumbnail"
-
-    val response = mockMvc.get(url)
-      .andReturn().response
-
-    Thread.sleep(100)
-    book.media.thumbnail = Random.nextBytes(1)
-    bookRepository.saveAndFlush(book)
-
-    mockMvc.get(url) {
-      headers {
-        ifNoneMatch = listOf(response.getHeader(HttpHeaders.ETAG)!!)
+    @Test
+    @WithMockCustomUser
+    fun `given request with cache headers and modified resource when getting thumbnail then returns 200 ok`() {
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
       }
-    }.andExpect {
-      status { isOk }
+
+      val book = bookRepository.findAll().first()
+      mediaRepository.findById(book.id).let {
+        it.thumbnail = Random.nextBytes(1)
+
+        mediaRepository.update(it)
+      }
+
+      val url = "/api/v1/books/${book.id}/thumbnail"
+
+      val response = mockMvc.get(url).andReturn().response
+
+      Thread.sleep(100)
+      mediaRepository.findById(book.id).let {
+        it.thumbnail = Random.nextBytes(1)
+        mediaRepository.update(it)
+      }
+
+      mockMvc.get(url) {
+        headers {
+          ifNoneMatch = listOf(response.getHeader(HttpHeaders.ETAG)!!)
+        }
+      }.andExpect {
+        status { isOk }
+      }
     }
   }
 
@@ -422,20 +495,20 @@ class BookControllerTest(
         status { isBadRequest }
       }
     }
-  }
 
-  //Not part of the above @Nested class because @Transactional fails
-  @Test
-  @Transactional
-  @WithMockCustomUser(roles = ["ADMIN"])
-  fun `given valid json when updating metadata then fields are updated`() {
-    val series = makeSeries(name = "series").also { it.libraryId = library.id }
-    val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
-    seriesLifecycle.createSeries(series, books)
+    @Test
+    @WithMockCustomUser(roles = ["ADMIN"])
+    fun `given valid json when updating metadata then fields are updated`() {
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
-    val bookId = bookRepository.findAll().first().id
+      val bookId = bookRepository.findAll().first().id
 
-    val jsonString = """
+      val jsonString = """
         {
           "title":"newTitle",
           "titleLock":true,
@@ -467,70 +540,74 @@ class BookControllerTest(
         }
       """.trimIndent()
 
-    mockMvc.patch("/api/v1/books/${bookId}/metadata") {
-      contentType = MediaType.APPLICATION_JSON
-      content = jsonString
-    }.andExpect {
-      status { isOk }
+      mockMvc.patch("/api/v1/books/${bookId}/metadata") {
+        contentType = MediaType.APPLICATION_JSON
+        content = jsonString
+      }.andExpect {
+        status { isOk }
+      }
+
+      val metadata = bookMetadataRepository.findById(bookId)
+      with(metadata) {
+        assertThat(title).isEqualTo("newTitle")
+        assertThat(summary).isEqualTo("newSummary")
+        assertThat(number).isEqualTo("newNumber")
+        assertThat(numberSort).isEqualTo(1F)
+        assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
+        assertThat(publisher).isEqualTo("newPublisher")
+        assertThat(ageRating).isEqualTo(12)
+        assertThat(releaseDate).isEqualTo(LocalDate.of(2020, 1, 1))
+        assertThat(authors)
+          .hasSize(2)
+          .extracting("name", "role")
+          .containsExactlyInAnyOrder(
+            tuple("newAuthor", "newauthorrole"),
+            tuple("newAuthor2", "newauthorrole2")
+          )
+
+        assertThat(titleLock).isEqualTo(true)
+        assertThat(summaryLock).isEqualTo(true)
+        assertThat(numberLock).isEqualTo(true)
+        assertThat(numberSortLock).isEqualTo(true)
+        assertThat(readingDirectionLock).isEqualTo(true)
+        assertThat(publisherLock).isEqualTo(true)
+        assertThat(ageRatingLock).isEqualTo(true)
+        assertThat(releaseDateLock).isEqualTo(true)
+        assertThat(authorsLock).isEqualTo(true)
+      }
     }
 
-    val updatedBook = bookRepository.findByIdOrNull(bookId)
-    with(updatedBook!!.metadata) {
-      assertThat(title).isEqualTo("newTitle")
-      assertThat(summary).isEqualTo("newSummary")
-      assertThat(number).isEqualTo("newNumber")
-      assertThat(numberSort).isEqualTo(1F)
-      assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
-      assertThat(publisher).isEqualTo("newPublisher")
-      assertThat(ageRating).isEqualTo(12)
-      assertThat(releaseDate).isEqualTo(LocalDate.of(2020, 1, 1))
-      assertThat(authors)
-        .hasSize(2)
-        .extracting("name", "role")
-        .containsExactlyInAnyOrder(
-          tuple("newAuthor", "newauthorrole"),
-          tuple("newAuthor2", "newauthorrole2")
-        )
+    @Test
+    @WithMockCustomUser(roles = ["ADMIN"])
+    fun `given json with null fields when updating metadata then fields with null are unset`() {
+      val testDate = LocalDate.of(2020, 1, 1)
 
-      assertThat(titleLock).isEqualTo(true)
-      assertThat(summaryLock).isEqualTo(true)
-      assertThat(numberLock).isEqualTo(true)
-      assertThat(numberSortLock).isEqualTo(true)
-      assertThat(readingDirectionLock).isEqualTo(true)
-      assertThat(publisherLock).isEqualTo(true)
-      assertThat(ageRatingLock).isEqualTo(true)
-      assertThat(releaseDateLock).isEqualTo(true)
-      assertThat(authorsLock).isEqualTo(true)
-    }
-  }
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
 
-  //Not part of the above @Nested class because @Transactional fails
-  @Test
-  @Transactional
-  @WithMockCustomUser(roles = ["ADMIN"])
-  fun `given json with null fields when updating metadata then fields with null are unset`() {
-    val testDate = LocalDate.of(2020, 1, 1)
+      val bookId = bookRepository.findAll().first().id
+      bookMetadataRepository.findById(bookId).let {
+        it.ageRating = 12
+        it.readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
+        it.authors.add(Author("Author", "role"))
+        it.releaseDate = testDate
 
-    val series = makeSeries(name = "series").also { it.libraryId = library.id }
-    val books = listOf(makeBook("1.cbr").also {
-      it.metadata.ageRating = 12
-      it.metadata.readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
-      it.metadata.authors.add(Author("Author", "role"))
-      it.metadata.releaseDate = testDate
-    }).also { list -> list.forEach { it.libraryId = library.id } }
-    seriesLifecycle.createSeries(series, books)
+        bookMetadataRepository.update(it)
+      }
 
-    val bookId = bookRepository.findAll().first().id
+      val metadata = bookMetadataRepository.findById(bookId)
+      with(metadata) {
+        assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
+        assertThat(ageRating).isEqualTo(12)
+        assertThat(authors).hasSize(1)
+        assertThat(releaseDate).isEqualTo(testDate)
+      }
 
-    val initialBook = bookRepository.findByIdOrNull(bookId)
-    with(initialBook!!.metadata) {
-      assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
-      assertThat(ageRating).isEqualTo(12)
-      assertThat(authors).hasSize(1)
-      assertThat(releaseDate).isEqualTo(testDate)
-    }
-
-    val jsonString = """
+      val jsonString = """
         {
           "readingDirection":null,
           "ageRating":null,
@@ -539,74 +616,75 @@ class BookControllerTest(
         }
       """.trimIndent()
 
-    mockMvc.patch("/api/v1/books/${bookId}/metadata") {
-      contentType = MediaType.APPLICATION_JSON
-      content = jsonString
-    }.andExpect {
-      status { isOk }
-    }
-
-    val updatedBook = bookRepository.findByIdOrNull(bookId)
-    with(updatedBook!!.metadata) {
-      assertThat(readingDirection).isNull()
-      assertThat(ageRating).isNull()
-      assertThat(authors).isEmpty()
-      assertThat(releaseDate).isNull()
-    }
-  }
-
-  //Not part of the above @Nested class because @Transactional fails
-  @Test
-  @Transactional
-  @WithMockCustomUser(roles = ["ADMIN"])
-  fun `given json without fields when updating metadata then existing fields are untouched`() {
-    val testDate = LocalDate.of(2020, 1, 1)
-
-    val series = makeSeries(name = "series").also { it.libraryId = library.id }
-    val books = listOf(makeBook("1.cbr").also {
-      with(it.metadata)
-      {
-        ageRating = 12
-        readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
-        authors.add(Author("Author", "role"))
-        releaseDate = testDate
-        summary = "summary"
-        number = "number"
-        numberLock = true
-        numberSort = 2F
-        numberSortLock = true
-        publisher = "publisher"
-        title = "title"
+      mockMvc.patch("/api/v1/books/${bookId}/metadata") {
+        contentType = MediaType.APPLICATION_JSON
+        content = jsonString
+      }.andExpect {
+        status { isOk }
       }
-    }).also { list -> list.forEach { it.libraryId = library.id } }
-    seriesLifecycle.createSeries(series, books)
 
+      val updatedMetadata = bookMetadataRepository.findById(bookId)
+      with(updatedMetadata) {
+        assertThat(readingDirection).isNull()
+        assertThat(ageRating).isNull()
+        assertThat(authors).isEmpty()
+        assertThat(releaseDate).isNull()
+      }
+    }
 
-    val bookId = bookRepository.findAll().first().id
+    @Test
+    @WithMockCustomUser(roles = ["ADMIN"])
+    fun `given json without fields when updating metadata then existing fields are untouched`() {
+      val testDate = LocalDate.of(2020, 1, 1)
 
-    val jsonString = """
+      makeSeries(name = "series").also { it.libraryId = library.id }.let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(makeBook("1.cbr")).also { list -> list.forEach { it.libraryId = library.id } }
+          seriesLifecycle.addBooks(created, books)
+        }
+      }
+
+      val bookId = bookRepository.findAll().first().id
+      bookMetadataRepository.findById(bookId).let {
+        it.ageRating = 12
+        it.readingDirection = BookMetadata.ReadingDirection.LEFT_TO_RIGHT
+        it.authors.add(Author("Author", "role"))
+        it.releaseDate = testDate
+        it.summary = "summary"
+        it.number = "number"
+        it.numberLock = true
+        it.numberSort = 2F
+        it.numberSortLock = true
+        it.publisher = "publisher"
+        it.title = "title"
+
+        bookMetadataRepository.update(it)
+      }
+
+      val jsonString = """
         {
         }
       """.trimIndent()
 
-    mockMvc.patch("/api/v1/books/${bookId}/metadata") {
-      contentType = MediaType.APPLICATION_JSON
-      content = jsonString
-    }.andExpect {
-      status { isOk }
-    }
+      mockMvc.patch("/api/v1/books/${bookId}/metadata") {
+        contentType = MediaType.APPLICATION_JSON
+        content = jsonString
+      }.andExpect {
+        status { isOk }
+      }
 
-    val updatedBook = bookRepository.findByIdOrNull(bookId)
-    with(updatedBook!!.metadata) {
-      assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
-      assertThat(ageRating).isEqualTo(12)
-      assertThat(authors).hasSize(1)
-      assertThat(releaseDate).isEqualTo(testDate)
-      assertThat(summary).isEqualTo("summary")
-      assertThat(number).isEqualTo("number")
-      assertThat(numberSort).isEqualTo(2F)
-      assertThat(publisher).isEqualTo("publisher")
-      assertThat(title).isEqualTo("title")
+      val metadata = bookMetadataRepository.findById(bookId)
+      with(metadata) {
+        assertThat(readingDirection).isEqualTo(BookMetadata.ReadingDirection.LEFT_TO_RIGHT)
+        assertThat(ageRating).isEqualTo(12)
+        assertThat(authors).hasSize(1)
+        assertThat(releaseDate).isEqualTo(testDate)
+        assertThat(summary).isEqualTo("summary")
+        assertThat(number).isEqualTo("number")
+        assertThat(numberSort).isEqualTo(2F)
+        assertThat(publisher).isEqualTo("publisher")
+        assertThat(title).isEqualTo("title")
+      }
     }
   }
 }

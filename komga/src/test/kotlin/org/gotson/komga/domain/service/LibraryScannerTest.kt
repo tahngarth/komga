@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.gotson.komga.application.service.BookLifecycle
+import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeBookPage
@@ -12,6 +13,7 @@ import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
+import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -20,10 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.junit.jupiter.SpringExtension
-import org.springframework.test.context.transaction.TestTransaction
-import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.annotation.Transactional
-import org.springframework.transaction.support.TransactionTemplate
 import java.nio.file.Paths
 
 @ExtendWith(SpringExtension::class)
@@ -35,7 +33,8 @@ class LibraryScannerTest(
   @Autowired private val bookRepository: BookRepository,
   @Autowired private val libraryScanner: LibraryScanner,
   @Autowired private val bookLifecycle: BookLifecycle,
-  @Autowired private val transactionManager: PlatformTransactionManager
+  @Autowired private val mediaRepository: MediaRepository,
+  @Autowired private val libraryLifecycle: LibraryLifecycle
 ) {
 
   @MockkBean
@@ -46,14 +45,12 @@ class LibraryScannerTest(
 
   @AfterEach
   fun `clear repositories`() {
-    if (TestTransaction.isActive()) TestTransaction.end()
-    bookRepository.deleteAll()
-    seriesRepository.deleteAll()
-    libraryRepository.deleteAll()
+    libraryRepository.findAll().forEach {
+      libraryLifecycle.deleteLibrary(it)
+    }
   }
 
   @Test
-  @Transactional
   fun `given existing series when adding files and scanning then only updated Books are persisted`() {
     // given
     val library = libraryRepository.insert(makeLibrary())
@@ -82,7 +79,6 @@ class LibraryScannerTest(
   }
 
   @Test
-  @Transactional
   fun `given existing series when removing files and scanning then only updated Books are persisted`() {
     // given
     val library = libraryRepository.insert(makeLibrary())
@@ -113,7 +109,6 @@ class LibraryScannerTest(
   }
 
   @Test
-  @Transactional
   fun `given existing series when updating files and scanning then Books are updated`() {
     // given
     val library = libraryRepository.insert(makeLibrary())
@@ -213,13 +208,16 @@ class LibraryScannerTest(
     verify(exactly = 2) { mockScanner.scanRootFolder(any()) }
     verify(exactly = 1) { mockAnalyzer.analyze(any()) }
 
-    TransactionTemplate(transactionManager).execute {
-      val book = bookRepository.findAll().first()
-      assertThat(book.media.status).isEqualTo(Media.Status.READY)
-      assertThat(book.media.mediaType).isEqualTo("application/zip")
-      assertThat(book.media.pages).hasSize(2)
-      assertThat(book.media.pages.map { it.fileName }).containsExactly("1.jpg", "2.jpg")
+    bookRepository.findAll().first().let { book ->
       assertThat(book.lastModifiedDate).isNotEqualTo(book.createdDate)
+
+      mediaRepository.findById(book.id).let { media ->
+        assertThat(media.status).isEqualTo(Media.Status.READY)
+        assertThat(media.mediaType).isEqualTo("application/zip")
+        assertThat(media.pages).hasSize(2)
+        assertThat(media.pages.map { it.fileName }).containsExactly("1.jpg", "2.jpg")
+      }
+
     }
   }
 
