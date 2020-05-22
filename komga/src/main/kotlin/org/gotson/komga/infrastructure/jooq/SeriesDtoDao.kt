@@ -64,6 +64,7 @@ class SeriesDtoDao(
   private fun findAll(conditions: Condition, pageable: Pageable): Page<SeriesDto> {
     val count = dsl.selectCount()
       .from(s)
+      .leftJoin(d).on(s.ID.eq(d.SERIES_ID))
       .where(conditions)
       .fetchOne(0, Int::class.java)
 
