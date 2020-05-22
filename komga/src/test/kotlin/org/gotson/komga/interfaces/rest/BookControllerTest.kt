@@ -5,6 +5,7 @@ import org.assertj.core.groups.Tuple.tuple
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.BookPage
+import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
@@ -295,6 +296,58 @@ class BookControllerTest(
 
     mockMvc.get("/api/v1/books/${book.id}/pages/$page")
       .andExpect { status { isBadRequest } }
+  }
+
+  @Nested
+  inner class Siblings {
+
+    @Test
+    @WithMockCustomUser
+    fun `given series with multiple books when getting siblings then it is returned or not found`() {
+      val series = makeSeries(name = "series", libraryId = library.id).let { series ->
+        seriesLifecycle.createSeries(series).also { created ->
+          val books = listOf(
+            makeBook("1", libraryId = library.id),
+            makeBook("2", libraryId = library.id),
+            makeBook("3", libraryId = library.id)
+          )
+          seriesLifecycle.addBooks(created, books)
+          seriesLifecycle.sortBooks(created)
+        }
+      }
+
+      val first = bookRepository.findFirstIdInSeries(series.id)
+      val second = bookRepository.findAll(BookSearch(searchTerm = "2")).first().id
+      val third = bookRepository.findAll(BookSearch(searchTerm = "3")).first().id
+
+      mockMvc.get("/api/v1/books/${first}/previous")
+        .andExpect { status { isNotFound } }
+      mockMvc.get("/api/v1/books/${first}/next")
+        .andExpect {
+          status { isOk }
+          jsonPath("$.name") { value("2") }
+        }
+
+      mockMvc.get("/api/v1/books/${second}/previous")
+        .andExpect {
+          status { isOk }
+          jsonPath("$.name") { value("1") }
+        }
+      mockMvc.get("/api/v1/books/${second}/next")
+        .andExpect {
+          status { isOk }
+          jsonPath("$.name") { value("3") }
+        }
+
+      mockMvc.get("/api/v1/books/${third}/previous")
+        .andExpect {
+          status { isOk }
+          jsonPath("$.name") { value("2") }
+        }
+      mockMvc.get("/api/v1/books/${third}/next")
+        .andExpect { status { isNotFound } }
+
+    }
   }
 
   @Nested

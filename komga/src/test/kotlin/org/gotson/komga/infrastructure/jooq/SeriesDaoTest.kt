@@ -2,6 +2,7 @@ package org.gotson.komga.infrastructure.jooq
 
 import org.assertj.core.api.Assertions.assertThat
 import org.gotson.komga.domain.model.Series
+import org.gotson.komga.domain.model.SeriesSearch
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.junit.jupiter.api.AfterAll
@@ -157,6 +158,25 @@ class SeriesDaoTest(
     val found = seriesDao.findByIdOrNull(1287746)
 
     assertThat(found).isNull()
+  }
+
+  @Test
+  fun `given existing series when searching then results is returned`() {
+    val series = Series(
+      name = "Series",
+      url = URL("file://series"),
+      fileLastModified = LocalDateTime.now(),
+      libraryId = library.id
+    )
+
+    seriesDao.insert(series)
+
+    val search = SeriesSearch(
+      libraryIds = listOf(library.id)
+    )
+    val found = seriesDao.findAll(search)
+
+    assertThat(found).hasSize(1)
   }
 
   @Test

@@ -3,13 +3,14 @@ package org.gotson.komga.domain.model
 import java.net.URL
 import java.time.LocalDateTime
 
-fun makeBook(name: String, fileLastModified: LocalDateTime = LocalDateTime.now(), libraryId: Long = 0): Book {
+fun makeBook(name: String, fileLastModified: LocalDateTime = LocalDateTime.now(), libraryId: Long = 0, seriesId: Long = 0): Book {
   Thread.sleep(5)
   return Book(
     name = name,
     url = URL("file:/$name"),
     fileLastModified = fileLastModified,
-    libraryId = libraryId
+    libraryId = libraryId,
+    seriesId = seriesId
   )
 }
 

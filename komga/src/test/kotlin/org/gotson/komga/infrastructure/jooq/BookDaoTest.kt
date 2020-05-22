@@ -2,6 +2,8 @@ package org.gotson.komga.infrastructure.jooq
 
 import org.assertj.core.api.Assertions.assertThat
 import org.gotson.komga.domain.model.Book
+import org.gotson.komga.domain.model.BookSearch
+import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
 import org.gotson.komga.domain.persistence.LibraryRepository
@@ -136,5 +138,59 @@ class BookDaoTest(
     val found = bookDao.findByIdOrNull(128742)
 
     assertThat(found).isNull()
+  }
+
+  @Test
+  fun `given some books when finding all then all are returned`() {
+    bookDao.insert(makeBook("1", libraryId = library.id, seriesId = series.id))
+    bookDao.insert(makeBook("2", libraryId = library.id, seriesId = series.id))
+
+    val found = bookDao.findAll()
+
+    assertThat(found).hasSize(2)
+  }
+
+  @Test
+  fun `given some books when searching then results are returned`() {
+    bookDao.insert(makeBook("1", libraryId = library.id, seriesId = series.id))
+    bookDao.insert(makeBook("2", libraryId = library.id, seriesId = series.id))
+
+    val search = BookSearch(
+      libraryIds = listOf(library.id),
+      seriesIds = listOf(series.id)
+    )
+    val found = bookDao.findAll(search)
+
+    assertThat(found).hasSize(2)
+  }
+
+  @Test
+  fun `given some books when finding by libraryId then results are returned`() {
+    bookDao.insert(makeBook("1", libraryId = library.id, seriesId = series.id))
+    bookDao.insert(makeBook("2", libraryId = library.id, seriesId = series.id))
+
+    val found = bookDao.findAllIdByLibraryId(library.id)
+
+    assertThat(found).hasSize(2)
+  }
+
+  @Test
+  fun `given some books when finding by seriesId then results are returned`() {
+    bookDao.insert(makeBook("1", libraryId = library.id, seriesId = series.id))
+    bookDao.insert(makeBook("2", libraryId = library.id, seriesId = series.id))
+
+    val found = bookDao.findAllIdBySeriesId(series.id)
+
+    assertThat(found).hasSize(2)
+  }
+
+  @Test
+  fun `given some books when deleting all then count is zero`() {
+    bookDao.insert(makeBook("1", libraryId = library.id, seriesId = series.id))
+    bookDao.insert(makeBook("2", libraryId = library.id, seriesId = series.id))
+
+    bookDao.deleteAll()
+
+    assertThat(bookDao.count()).isEqualTo(0)
   }
 }
