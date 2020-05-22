@@ -91,6 +91,7 @@ class BookDtoDao(
   private fun findSibling(bookId: Long, next: Boolean): BookDto? {
     val record = dsl.select(b.SERIES_ID, d.NUMBER_SORT)
       .from(b)
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
       .where(b.ID.eq(bookId))
       .fetchOne()
     val seriesId = record.get(0, Long::class.java)
