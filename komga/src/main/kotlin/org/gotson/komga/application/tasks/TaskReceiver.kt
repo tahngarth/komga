@@ -5,12 +5,12 @@ import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.Media
+import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_TYPE
 import org.gotson.komga.infrastructure.jms.QUEUE_UNIQUE_ID
-import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.springframework.jms.core.JmsTemplate
 import org.springframework.stereotype.Service
 
@@ -20,7 +20,7 @@ private val logger = KotlinLogging.logger {}
 class TaskReceiver(
   private val jmsTemplate: JmsTemplate,
   private val libraryRepository: LibraryRepository,
-  private val bookDtoRepository: BookDtoRepository //TODO: replace with non-DTO interface
+  private val bookRepository: BookRepository
 ) {
 
   fun scanLibraries() {
@@ -32,7 +32,7 @@ class TaskReceiver(
   }
 
   fun analyzeUnknownBooks(library: Library) {
-    bookDtoRepository.findAllId(BookSearch(
+    bookRepository.findAllId(BookSearch(
       libraryIds = listOf(library.id),
       mediaStatus = listOf(Media.Status.UNKNOWN)
     )).forEach {

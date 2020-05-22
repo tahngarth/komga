@@ -1,4 +1,4 @@
-package org.gotson.komga.application.service
+package org.gotson.komga.domain.service
 
 import mu.KotlinLogging
 import org.gotson.komga.domain.model.Book
@@ -9,7 +9,6 @@ import org.gotson.komga.domain.model.MediaNotReadyException
 import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.MediaRepository
-import org.gotson.komga.domain.service.BookAnalyzer
 import org.gotson.komga.infrastructure.image.ImageConverter
 import org.gotson.komga.infrastructure.image.ImageType
 import org.springframework.stereotype.Service

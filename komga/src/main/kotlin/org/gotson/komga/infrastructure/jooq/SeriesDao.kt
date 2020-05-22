@@ -1,11 +1,14 @@
 package org.gotson.komga.infrastructure.jooq
 
 import org.gotson.komga.domain.model.Series
+import org.gotson.komga.domain.model.SeriesSearch
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.jooq.Sequences
 import org.gotson.komga.jooq.Tables
 import org.gotson.komga.jooq.tables.records.SeriesRecord
+import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Component
 import java.net.URL
 import java.time.LocalDateTime
@@ -48,6 +51,24 @@ class SeriesDao(
       .where(s.LIBRARY_ID.eq(libraryId).and(s.URL.eq(url.toString())))
       .fetchOneInto(s)
       ?.toDomain()
+
+
+  override fun getLibraryId(seriesId: Long): Long? =
+    dsl.select(s.LIBRARY_ID)
+      .from(s)
+      .where(s.ID.eq(seriesId))
+      .fetchOne(0, Long::class.java)
+
+
+  override fun findAll(search: SeriesSearch): Collection<Series> {
+    val conditions = search.toCondition()
+
+    return dsl.selectFrom(s)
+      .where(conditions)
+      .fetchInto(s)
+      .map { it.toDomain() }
+  }
+
 
   override fun insert(series: Series): Series {
     val id = dsl.nextval(Sequences.HIBERNATE_SEQUENCE)
@@ -105,6 +126,17 @@ class SeriesDao(
   }
 
   override fun count(): Long = dsl.fetchCount(s).toLong()
+
+
+  private fun SeriesSearch.toCondition(): Condition {
+    var c: Condition = DSL.trueCondition()
+
+    if (libraryIds.isNotEmpty()) c = c.and(s.LIBRARY_ID.`in`(libraryIds))
+    searchTerm?.let { c = c.and(d.TITLE.containsIgnoreCase(searchTerm)) }
+    if (metadataStatus.isNotEmpty()) c = c.and(d.STATUS.`in`(metadataStatus))
+
+    return c
+  }
 
   private fun SeriesRecord.toDomain() =
     Series(

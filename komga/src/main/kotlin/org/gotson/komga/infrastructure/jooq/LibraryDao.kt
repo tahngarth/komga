@@ -15,8 +15,6 @@ class LibraryDao(
 ) : LibraryRepository {
 
   private val l = Tables.LIBRARY
-  private val b = Tables.BOOK
-  private val s = Tables.SERIES
   private val ul = Tables.USER_LIBRARY_SHARING
 
   override fun findByIdOrNull(libraryId: Long): Library? =

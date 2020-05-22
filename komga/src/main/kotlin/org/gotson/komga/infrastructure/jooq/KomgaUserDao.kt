@@ -14,8 +14,8 @@ import java.time.LocalDateTime
 class KomgaUserDao(
   private val dsl: DSLContext
 ) : KomgaUserRepository {
+
   private val u = Tables.USER
-  private val l = Tables.LIBRARY
   private val ul = Tables.USER_LIBRARY_SHARING
 
   override fun count(): Long = dsl.fetchCount(u).toLong()
@@ -33,19 +33,18 @@ class KomgaUserDao(
   private fun selectBase() =
     dsl
       .select(*u.fields())
-      .select(l.ID)
+      .select(ul.LIBRARY_ID)
       .from(u)
       .leftJoin(ul).onKey()
-      .leftJoin(l).onKey()
 
   private fun ResultQuery<Record>.fetchAndMap() =
-    this.fetchGroups({ it.into(u) }, { it.into(l) })
-      .map { (ur, lr) ->
+    this.fetchGroups({ it.into(u) }, { it.into(ul) })
+      .map { (ur, ulr) ->
         KomgaUser(
           email = ur.email,
           password = ur.password,
           roleAdmin = ur.roleAdmin,
-          sharedLibrariesIds = lr.mapNotNull { it.id }.toSet(),
+          sharedLibrariesIds = ulr.mapNotNull { it.libraryId }.toSet(),
           sharedAllLibraries = ur.sharedAllLibraries,
           id = ur.id,
           createdDate = ur.createdDate,

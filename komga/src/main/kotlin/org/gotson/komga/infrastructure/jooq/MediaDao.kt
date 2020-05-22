@@ -39,6 +39,13 @@ class MediaDao(
       }.first()
 
 
+  override fun getThumbnail(bookId: Long): ByteArray? =
+    dsl.select(m.THUMBNAIL)
+      .from(m)
+      .where(m.BOOK_ID.eq(bookId))
+      .fetchOne(0, ByteArray::class.java)
+
+
   override fun insert(media: Media): Media {
     dsl.transaction { config ->
       with(config.dsl())

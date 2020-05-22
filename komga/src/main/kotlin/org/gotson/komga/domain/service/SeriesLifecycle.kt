@@ -2,7 +2,6 @@ package org.gotson.komga.domain.service
 
 import mu.KotlinLogging
 import net.greypanther.natsort.CaseInsensitiveSimpleNaturalComparator
-import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.Media

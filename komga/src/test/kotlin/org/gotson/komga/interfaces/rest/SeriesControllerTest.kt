@@ -1,7 +1,6 @@
 package org.gotson.komga.interfaces.rest
 
 import org.assertj.core.api.Assertions.assertThat
-import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.domain.model.SeriesMetadata
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
@@ -12,6 +11,7 @@ import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.domain.persistence.SeriesMetadataRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
+import org.gotson.komga.domain.service.LibraryLifecycle
 import org.gotson.komga.domain.service.SeriesLifecycle
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterAll

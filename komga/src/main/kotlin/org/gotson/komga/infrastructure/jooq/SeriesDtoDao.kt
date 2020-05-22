@@ -1,10 +1,10 @@
 package org.gotson.komga.infrastructure.jooq
 
+import org.gotson.komga.domain.model.SeriesSearch
 import org.gotson.komga.interfaces.rest.dto.SeriesDto
 import org.gotson.komga.interfaces.rest.dto.SeriesMetadataDto
 import org.gotson.komga.interfaces.rest.dto.toUTC
 import org.gotson.komga.interfaces.rest.persistence.SeriesDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.SeriesSearch
 import org.gotson.komga.jooq.Tables
 import org.gotson.komga.jooq.tables.records.SeriesMetadataRecord
 import org.gotson.komga.jooq.tables.records.SeriesRecord
@@ -17,7 +17,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.net.URL
 
@@ -47,18 +46,6 @@ class SeriesDtoDao(
     return findAll(conditions, pageable)
   }
 
-  override fun findAll(search: SeriesSearch, sort: Sort): Collection<SeriesDto> {
-    val conditions = search.toCondition()
-
-    val orderBy = sort.toOrderBy(sorts)
-
-    return selectBase()
-      .where(conditions)
-      .groupBy(*groupFields)
-      .orderBy(orderBy)
-      .fetchAndMap()
-  }
-
   override fun findRecentlyUpdated(search: SeriesSearch, pageable: Pageable): Page<SeriesDto> {
     val conditions = search.toCondition()
       .and(s.CREATED_DATE.ne(s.LAST_MODIFIED_DATE))
@@ -73,11 +60,6 @@ class SeriesDtoDao(
       .fetchAndMap()
       .firstOrNull()
 
-  override fun getLibraryId(seriesId: Long): Long? =
-    dsl.select(s.LIBRARY_ID)
-      .from(s)
-      .where(s.ID.eq(seriesId))
-      .fetchOne(0, Long::class.java)
 
   private fun findAll(conditions: Condition, pageable: Pageable): Page<SeriesDto> {
     val count = dsl.selectCount()

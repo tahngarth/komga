@@ -2,7 +2,6 @@ package org.gotson.komga.interfaces.rest
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.groups.Tuple.tuple
-import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.BookMetadata
 import org.gotson.komga.domain.model.BookPage
@@ -15,6 +14,7 @@ import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
+import org.gotson.komga.domain.service.LibraryLifecycle
 import org.gotson.komga.domain.service.SeriesLifecycle
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach

@@ -50,6 +50,46 @@ class BookDao(
       .fetchInto(b)
       .map { it.toDomain() }
 
+
+  override fun getLibraryId(bookId: Long): Long? =
+    dsl.select(b.LIBRARY_ID)
+      .from(b)
+      .where(b.ID.eq(bookId))
+      .fetchOne(0, Long::class.java)
+
+  override fun findFirstIdInSeries(seriesId: Long): Long? =
+    dsl.select(b.ID)
+      .from(b)
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
+      .where(b.SERIES_ID.eq(seriesId))
+      .orderBy(d.NUMBER_SORT)
+      .limit(1)
+      .fetchOne(0, Long::class.java)
+
+  override fun findAllIdBySeriesId(seriesId: Long): Collection<Long> =
+    dsl.select(b.ID)
+      .from(b)
+      .where(b.SERIES_ID.eq(seriesId))
+      .fetch(0, Long::class.java)
+
+  override fun findAllIdByLibraryId(libraryId: Long): Collection<Long> =
+    dsl.select(b.ID)
+      .from(b)
+      .where(b.LIBRARY_ID.eq(libraryId))
+      .fetch(0, Long::class.java)
+
+  override fun findAllId(bookSearch: BookSearch): Collection<Long> {
+    val conditions = bookSearch.toCondition()
+
+    return dsl.select(b.ID)
+      .from(b)
+      .leftJoin(m).on(b.ID.eq(m.BOOK_ID))
+      .leftJoin(d).on(b.ID.eq(d.BOOK_ID))
+      .where(conditions)
+      .fetch(0, Long::class.java)
+  }
+
+
   override fun insert(book: Book): Book {
     val id = dsl.nextval(Sequences.HIBERNATE_SEQUENCE)
     dsl.insertInto(b)

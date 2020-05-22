@@ -4,13 +4,13 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.verify
 import mu.KotlinLogging
-import org.gotson.komga.application.service.LibraryLifecycle
-import org.gotson.komga.application.service.MetadataLifecycle
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
+import org.gotson.komga.domain.service.LibraryLifecycle
+import org.gotson.komga.domain.service.MetadataLifecycle
 import org.gotson.komga.domain.service.SeriesLifecycle
 import org.gotson.komga.infrastructure.jms.QUEUE_TASKS
 import org.junit.jupiter.api.AfterAll

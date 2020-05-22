@@ -1,15 +1,15 @@
 package org.gotson.komga.interfaces.rest
 
 import mu.KotlinLogging
-import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.DirectoryNotFoundException
 import org.gotson.komga.domain.model.DuplicateNameException
 import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.PathContainedInPath
+import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.LibraryRepository
+import org.gotson.komga.domain.service.LibraryLifecycle
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
-import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
@@ -32,10 +32,10 @@ private val logger = KotlinLogging.logger {}
 @RestController
 @RequestMapping("api/v1/libraries", produces = [MediaType.APPLICATION_JSON_VALUE])
 class LibraryController(
+  private val taskReceiver: TaskReceiver,
   private val libraryLifecycle: LibraryLifecycle,
   private val libraryRepository: LibraryRepository,
-  private val bookDtoRepository: BookDtoRepository,
-  private val taskReceiver: TaskReceiver
+  private val bookRepository: BookRepository
 ) {
 
   @GetMapping
@@ -99,7 +99,7 @@ class LibraryController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun analyze(@PathVariable libraryId: Long) {
-    bookDtoRepository.findAllIdByLibraryId(libraryId).forEach {
+    bookRepository.findAllIdByLibraryId(libraryId).forEach {
       taskReceiver.analyzeBook(it)
     }
   }
@@ -108,7 +108,7 @@ class LibraryController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun refreshMetadata(@PathVariable libraryId: Long) {
-    bookDtoRepository.findAllIdByLibraryId(libraryId).forEach {
+    bookRepository.findAllIdByLibraryId(libraryId).forEach {
       taskReceiver.refreshBookMetadata(it)
     }
   }

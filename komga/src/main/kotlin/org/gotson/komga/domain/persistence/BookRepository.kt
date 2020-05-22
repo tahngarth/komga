@@ -9,6 +9,12 @@ interface BookRepository {
   fun findAll(): Collection<Book>
   fun findAll(bookSearch: BookSearch): Collection<Book>
 
+  fun getLibraryId(bookId: Long): Long?
+  fun findFirstIdInSeries(seriesId: Long): Long?
+  fun findAllIdBySeriesId(seriesId: Long): Collection<Long>
+  fun findAllIdByLibraryId(libraryId: Long): Collection<Long>
+  fun findAllId(bookSearch: BookSearch): Collection<Long>
+
   fun insert(book: Book): Book
   fun update(book: Book)
 

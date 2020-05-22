@@ -1,7 +1,6 @@
 package org.gotson.komga.domain.service
 
 import org.assertj.core.api.Assertions.assertThat
-import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeLibrary
 import org.gotson.komga.domain.model.makeSeries

@@ -48,5 +48,4 @@ class SeriesMetadata(
 
   override fun toString(): String =
     "SeriesMetadata(status=$status, statusLock=$statusLock, titleLock=$titleLock, titleSortLock=$titleSortLock, seriesId=$seriesId, createdDate=$createdDate, lastModifiedDate=$lastModifiedDate, title='$title', titleSort='$titleSort')"
-
 }

@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import mu.KotlinLogging
-import org.gotson.komga.application.service.BookLifecycle
 import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.Author
 import org.gotson.komga.domain.model.BookSearch
@@ -16,6 +15,7 @@ import org.gotson.komga.domain.model.MediaNotReadyException
 import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.MediaRepository
+import org.gotson.komga.domain.service.BookLifecycle
 import org.gotson.komga.infrastructure.image.ImageType
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
 import org.gotson.komga.infrastructure.swagger.PageableAsQueryParam
@@ -60,12 +60,12 @@ private val logger = KotlinLogging.logger {}
 @RestController
 @RequestMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
 class BookController(
-  private val bookRepository: BookRepository,
-  private val mediaRepository: MediaRepository,
-  private val bookMetadataRepository: BookMetadataRepository,
-  private val bookDtoRepository: BookDtoRepository,
+  private val taskReceiver: TaskReceiver,
   private val bookLifecycle: BookLifecycle,
-  private val taskReceiver: TaskReceiver
+  private val bookRepository: BookRepository,
+  private val bookMetadataRepository: BookMetadataRepository,
+  private val mediaRepository: MediaRepository,
+  private val bookDtoRepository: BookDtoRepository
 ) {
 
   @PageableAsQueryParam
@@ -134,8 +134,10 @@ class BookController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
   ): BookDto {
-    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    bookRepository.getLibraryId(bookId)?.let {
+      if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+
     return bookDtoRepository.findPreviousInSeries(bookId)
       ?.restrictUrl(!principal.user.roleAdmin)
       ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -146,8 +148,10 @@ class BookController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
   ): BookDto {
-    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    bookRepository.getLibraryId(bookId)?.let {
+      if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+
     return bookDtoRepository.findNextInSeries(bookId)
       ?.restrictUrl(!principal.user.roleAdmin)
       ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
@@ -163,9 +167,11 @@ class BookController(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable bookId: Long
   ): ResponseEntity<ByteArray> {
-    val libraryId = bookDtoRepository.getLibraryId(bookId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
-    return bookDtoRepository.getThumbnail(bookId)?.let {
+    bookRepository.getLibraryId(bookId)?.let {
+      if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+
+    return mediaRepository.getThumbnail(bookId)?.let {
       ResponseEntity.ok()
         .setCachePrivate()
         .body(it)

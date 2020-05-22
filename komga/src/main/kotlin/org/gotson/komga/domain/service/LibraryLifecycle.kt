@@ -1,4 +1,4 @@
-package org.gotson.komga.application.service
+package org.gotson.komga.domain.service
 
 import mu.KotlinLogging
 import org.gotson.komga.application.tasks.TaskReceiver
@@ -8,7 +8,6 @@ import org.gotson.komga.domain.model.Library
 import org.gotson.komga.domain.model.PathContainedInPath
 import org.gotson.komga.domain.persistence.LibraryRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
-import org.gotson.komga.domain.service.SeriesLifecycle
 import org.springframework.stereotype.Service
 import java.io.FileNotFoundException
 import java.nio.file.Files

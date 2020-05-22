@@ -10,6 +10,8 @@ import org.gotson.komga.application.tasks.TaskReceiver
 import org.gotson.komga.domain.model.BookSearch
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.SeriesMetadata
+import org.gotson.komga.domain.model.SeriesSearch
+import org.gotson.komga.domain.persistence.BookRepository
 import org.gotson.komga.domain.persistence.SeriesMetadataRepository
 import org.gotson.komga.domain.persistence.SeriesRepository
 import org.gotson.komga.infrastructure.security.KomgaPrincipal
@@ -21,7 +23,6 @@ import org.gotson.komga.interfaces.rest.dto.SeriesMetadataUpdateDto
 import org.gotson.komga.interfaces.rest.dto.restrictUrl
 import org.gotson.komga.interfaces.rest.persistence.BookDtoRepository
 import org.gotson.komga.interfaces.rest.persistence.SeriesDtoRepository
-import org.gotson.komga.interfaces.rest.persistence.SeriesSearch
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -48,12 +49,13 @@ private val logger = KotlinLogging.logger {}
 @RestController
 @RequestMapping("api/v1/series", produces = [MediaType.APPLICATION_JSON_VALUE])
 class SeriesController(
+  private val taskReceiver: TaskReceiver,
   private val seriesRepository: SeriesRepository,
   private val seriesMetadataRepository: SeriesMetadataRepository,
   private val seriesDtoRepository: SeriesDtoRepository,
+  private val bookRepository: BookRepository,
   private val bookDtoRepository: BookDtoRepository,
-  private val bookController: BookController,
-  private val taskReceiver: TaskReceiver
+  private val bookController: BookController
 ) {
 
   @PageableAsQueryParam
@@ -160,21 +162,27 @@ class SeriesController(
   fun getSeriesThumbnail(
     @AuthenticationPrincipal principal: KomgaPrincipal,
     @PathVariable(name = "seriesId") seriesId: Long
-  ): ResponseEntity<ByteArray> =
-    bookDtoRepository.findFirstIdInSeries(seriesId)?.let {
+  ): ResponseEntity<ByteArray> {
+    seriesRepository.getLibraryId(seriesId)?.let {
+      if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+
+    return bookRepository.findFirstIdInSeries(seriesId)?.let {
       bookController.getBookThumbnail(principal, it)
     } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+  }
 
   @PageableAsQueryParam
   @GetMapping("{seriesId}/books")
   fun getAllBooksBySeries(
     @AuthenticationPrincipal principal: KomgaPrincipal,
-    @PathVariable(name = "seriesId") id: Long,
+    @PathVariable(name = "seriesId") seriesId: Long,
     @RequestParam(name = "media_status", required = false) mediaStatus: List<Media.Status>?,
     @Parameter(hidden = true) page: Pageable
   ): Page<BookDto> {
-    val libraryId = seriesDtoRepository.getLibraryId(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-    if (!principal.user.canAccessLibrary(libraryId)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    seriesRepository.getLibraryId(seriesId)?.let {
+      if (!principal.user.canAccessLibrary(it)) throw ResponseStatusException(HttpStatus.UNAUTHORIZED)
+    } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
     val pageRequest = PageRequest.of(
       page.pageNumber,
@@ -185,7 +193,7 @@ class SeriesController(
 
     return bookDtoRepository.findAll(
       BookSearch(
-        seriesIds = listOf(id),
+        seriesIds = listOf(seriesId),
         mediaStatus = mediaStatus ?: emptyList()
       ),
       pageRequest
@@ -196,7 +204,7 @@ class SeriesController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun analyze(@PathVariable seriesId: Long) {
-    bookDtoRepository.findAllIdBySeriesId(seriesId).forEach {
+    bookRepository.findAllIdBySeriesId(seriesId).forEach {
       taskReceiver.analyzeBook(it)
     }
   }
@@ -205,7 +213,7 @@ class SeriesController(
   @PreAuthorize("hasRole('ADMIN')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   fun refreshMetadata(@PathVariable seriesId: Long) {
-    bookDtoRepository.findAllIdBySeriesId(seriesId).forEach {
+    bookRepository.findAllIdBySeriesId(seriesId).forEach {
       taskReceiver.refreshBookMetadata(it)
     }
   }

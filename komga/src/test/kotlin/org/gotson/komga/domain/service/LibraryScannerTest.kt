@@ -4,8 +4,6 @@ import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
-import org.gotson.komga.application.service.BookLifecycle
-import org.gotson.komga.application.service.LibraryLifecycle
 import org.gotson.komga.domain.model.Media
 import org.gotson.komga.domain.model.makeBook
 import org.gotson.komga.domain.model.makeBookPage

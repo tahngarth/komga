@@ -1,7 +1,6 @@
 package org.gotson.komga.domain.model
 
-
-class BookPage(
+data class BookPage(
   val fileName: String,
   val mediaType: String
 )

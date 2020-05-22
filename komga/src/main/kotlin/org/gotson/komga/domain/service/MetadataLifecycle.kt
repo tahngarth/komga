@@ -1,11 +1,10 @@
-package org.gotson.komga.application.service
+package org.gotson.komga.domain.service
 
 import mu.KotlinLogging
 import org.gotson.komga.domain.model.Book
 import org.gotson.komga.domain.persistence.BookMetadataRepository
 import org.gotson.komga.domain.persistence.MediaRepository
 import org.gotson.komga.domain.persistence.SeriesMetadataRepository
-import org.gotson.komga.domain.service.MetadataApplier
 import org.gotson.komga.infrastructure.metadata.BookMetadataProvider
 import org.springframework.stereotype.Service
 

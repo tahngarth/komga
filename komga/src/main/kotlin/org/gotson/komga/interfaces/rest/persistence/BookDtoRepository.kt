@@ -10,12 +10,4 @@ interface BookDtoRepository {
   fun findByIdOrNull(bookId: Long): BookDto?
   fun findPreviousInSeries(bookId: Long): BookDto?
   fun findNextInSeries(bookId: Long): BookDto?
-
-  // to move to BookRepository later on
-  fun getLibraryId(bookId: Long): Long?
-  fun getThumbnail(bookId: Long): ByteArray?
-  fun findFirstIdInSeries(seriesId: Long): Long?
-  fun findAllIdBySeriesId(seriesId: Long): Collection<Long>
-  fun findAllIdByLibraryId(libraryId: Long): Collection<Long>
-  fun findAllId(bookSearch: BookSearch = BookSearch()): Collection<Long>
 }
