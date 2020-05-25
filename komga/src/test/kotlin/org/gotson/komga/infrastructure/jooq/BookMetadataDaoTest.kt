@@ -199,7 +199,7 @@ class BookMetadataDaoTest(
     assertThat(modified.bookId).isEqualTo(updated.bookId)
     assertThat(modified.createdDate).isEqualTo(updated.createdDate)
     assertThat(modified.lastModifiedDate)
-      .isAfter(modificationDate)
+      .isAfterOrEqualTo(modificationDate)
       .isNotEqualTo(updated.lastModifiedDate)
 
     assertThat(modified.title).isEqualTo(updated.title)
