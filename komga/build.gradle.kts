@@ -31,12 +31,6 @@ configurations.runtimeClasspath.get().extendsFrom(developmentOnly)
 repositories {
   jcenter()
   mavenCentral()
-  maven("https://jitpack.io") {
-    content {
-      includeGroup("com.github.klinq")
-    }
-  }
-
 }
 
 dependencies {
@@ -77,8 +71,6 @@ dependencies {
 
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
   implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
-
-  implementation("com.github.klinq:klinq-jpaspec:0.9")
 
   implementation("commons-io:commons-io:2.6")
   implementation("org.apache.commons:commons-lang3:3.10")
