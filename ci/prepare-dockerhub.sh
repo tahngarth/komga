@@ -23,7 +23,7 @@ source "$(dirname "$0")/docker-common.sh" $1 $2
 cd komga
 docker buildx build \
     --platform $PLATFORMS \
-    --cache-from gotson/komga:$DOCKER_CHANNEL \
-    --tag gotson/komga:$DOCKER_CHANNEL \
-    --tag gotson/komga:$1 \
+    --cache-from tahngarth/komga:$DOCKER_CHANNEL \
+    --tag tahngarth/komga:$DOCKER_CHANNEL \
+    --tag tahngarth/komga:$1 \
     --file ./Dockerfile .
